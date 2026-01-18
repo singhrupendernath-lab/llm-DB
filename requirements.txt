@@ -5,3 +5,7 @@ langchain-openai
 langchain-experimental
 sqlalchemy
 python-dotenv
+pymysql
+langchain-huggingface
+transformers
+torch

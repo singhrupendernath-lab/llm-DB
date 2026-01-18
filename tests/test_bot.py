@@ -15,8 +15,8 @@ class TestOracleBot(unittest.TestCase):
         mock_db_chain = MagicMock()
         mock_db_chain_class.from_llm.return_value = mock_db_chain
         
-        db_manager = DBManager(use_sqlite=True, sqlite_path="demo.db")
-        llm_manager = LLMManager()
+        db_manager = DBManager(db_type="sqlite")
+        llm_manager = LLMManager(llm_type="openai")
         bot = OracleBot(db_manager, llm_manager)
         
         # Mocking the chain's invoke method
