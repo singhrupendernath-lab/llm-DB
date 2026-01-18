@@ -1,0 +1,8 @@
+__pycache__/
+.LLM_DB
+*.py[cod]
+*$py.class
+.env
+*.db
+.pytest_cache/
+

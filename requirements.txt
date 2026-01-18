@@ -1,0 +1,7 @@
+oracledb
+langchain
+langchain-community
+langchain-openai
+langchain-experimental
+sqlalchemy
+python-dotenv
