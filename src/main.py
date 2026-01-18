@@ -1,8 +1,8 @@
 import sys
-from src.db_manager import DBManager
-from src.llm_manager import LLMManager
-from src.oracle_bot import OracleBot
-from src.config import Config
+from db_manager import DBManager
+from llm_manager import LLMManager
+from oracle_bot import OracleBot
+from config import Config
 
 def main():
     print(f"--- DB-LLM RAG Bot ({Config.DB_TYPE} + {Config.LLM_TYPE}) ---")

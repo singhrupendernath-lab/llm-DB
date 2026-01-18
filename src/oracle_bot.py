@@ -1,7 +1,7 @@
 from langchain_experimental.sql import SQLDatabaseChain
 from langchain_core.prompts import PromptTemplate
-from .db_manager import DBManager
-from .llm_manager import LLMManager
+from db_manager import DBManager
+from llm_manager import LLMManager
 
 class OracleBot:
     def __init__(self, db_manager: DBManager, llm_manager: LLMManager):
