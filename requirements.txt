@@ -10,3 +10,5 @@ langchain-huggingface
 transformers
 torch
 gguf
+llama-cpp-python
+huggingface_hub

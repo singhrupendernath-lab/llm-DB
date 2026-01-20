@@ -45,24 +45,53 @@ class TestManagers(unittest.TestCase):
     @patch('src.llm_manager.AutoTokenizer')
     @patch('src.llm_manager.pipeline')
     @patch('src.llm_manager.HuggingFacePipeline')
-    def test_llm_manager_huggingface_gguf(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_causal, mock_autoconfig):
+    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_causal, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
-        Config.HF_MODEL_ID = "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF"
-        Config.HF_GGUF_FILE = "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+        Config.HF_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 
-        mock_autoconfig.from_pretrained.side_effect = Exception("No config")
+        mock_config = MagicMock()
+        mock_config.model_type = "qwen2"
+        mock_autoconfig.from_pretrained.return_value = mock_config
 
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
 
-        mock_causal.from_pretrained.assert_called_with(
-            "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF",
-            token=Config.HF_TOKEN,
-            trust_remote_code=True,
-            gguf_file="Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf"
+        mock_tokenizer.from_pretrained.assert_called()
+        mock_pipeline.assert_called_with(
+            "text-generation",
+            model=mock_causal.from_pretrained.return_value,
+            tokenizer=mock_tokenizer.from_pretrained.return_value,
+            device=-1,
+            max_new_tokens=512,
+            repetition_penalty=1.1,
+            truncation=True
         )
 
-        mock_pipeline.assert_called()
+    @patch('src.llm_manager.LlamaCpp')
+    @patch('src.llm_manager.hf_hub_download')
+    def test_llm_manager_llamacpp(self, mock_download, mock_llamacpp):
+        Config.LLM_TYPE = "llamacpp"
+        Config.HF_GGUF_REPO = "repo"
+        Config.HF_GGUF_FILE = "file.gguf"
+        Config.LOCAL_MODEL_PATH = None
+
+        mock_download.return_value = "/path/to/file.gguf"
+
+        llm_manager = LLMManager(llm_type="llamacpp")
+        llm_manager.get_llm()
+
+        mock_download.assert_called_with(
+            repo_id="repo",
+            filename="file.gguf",
+            token=Config.HF_TOKEN
+        )
+        mock_llamacpp.assert_called_with(
+            model_path="/path/to/file.gguf",
+            n_ctx=4096,
+            n_threads=unittest.mock.ANY,
+            temperature=0,
+            verbose=True
+        )
 
     @patch('src.oracle_bot.create_sql_agent')
     def test_oracle_bot(self, mock_create_sql_agent):
