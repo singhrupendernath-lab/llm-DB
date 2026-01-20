@@ -1,7 +1,9 @@
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFacePipeline
+from langchain_community.llms import LlamaCpp
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, pipeline, AutoConfig
-from config import Config
+from huggingface_hub import hf_hub_download
+from src.config import Config
 import torch
 import os
 
@@ -23,12 +25,11 @@ class LLMManager:
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
 
+            # Load model config
             try:
-                # Load model config
                 hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
                 model_type = hf_config.model_type
-            except Exception as e:
-                print(f"Warning: Could not load config for {self.model_name}: {e}")
+            except Exception:
                 model_type = "unknown"
 
             # Determine task
@@ -45,45 +46,29 @@ class LLMManager:
             device = 0 if torch.cuda.is_available() else -1
 
             # Explicitly load tokenizer and model
-            model_kwargs = {
-                "token": Config.HF_TOKEN,
-                "trust_remote_code": True
-            }
+            tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                token=Config.HF_TOKEN,
+                trust_remote_code=True,
+                model_max_length=Config.HF_MAX_LENGTH
+            )
 
-            if Config.HF_GGUF_FILE:
-                print(f"Loading GGUF file: {Config.HF_GGUF_FILE}")
-                model_kwargs["gguf_file"] = Config.HF_GGUF_FILE
-
-            try:
-                tokenizer = AutoTokenizer.from_pretrained(
+            if task == "text2text-generation":
+                model = AutoModelForSeq2SeqLM.from_pretrained(
                     self.model_name,
                     token=Config.HF_TOKEN,
-                    trust_remote_code=True,
-                    model_max_length=Config.HF_MAX_LENGTH
+                    trust_remote_code=True
+                )
+            else:
+                model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    token=Config.HF_TOKEN,
+                    trust_remote_code=True
                 )
 
-                if task == "text2text-generation":
-                    model = AutoModelForSeq2SeqLM.from_pretrained(
-                        self.model_name,
-                        **model_kwargs
-                    )
-                else:
-                    model = AutoModelForCausalLM.from_pretrained(
-                        self.model_name,
-                        **model_kwargs
-                    )
-
-                # Force disable cache to avoid 'DynamicCache' object has no attribute 'seen_tokens'
-                if hasattr(model, 'config'):
-                    model.config.use_cache = False
-
-            except Exception as e:
-                raise RuntimeError(
-                    f"Failed to load model '{self.model_name}'. "
-                    f"Error: {e}. \n"
-                    "Tip: If using Llama-3, ensure you have accepted the license on Hugging Face "
-                    "and provided a valid HF_TOKEN in your .env file."
-                )
+            # Force disable cache to avoid 'DynamicCache' object has no attribute 'seen_tokens'
+            if hasattr(model, 'config'):
+                model.config.use_cache = False
 
             # Create pipeline
             pipe = pipeline(
@@ -97,5 +82,28 @@ class LLMManager:
             )
 
             return HuggingFacePipeline(pipeline=pipe)
+
+        elif self.llm_type == "llamacpp":
+            model_path = Config.LOCAL_MODEL_PATH
+
+            if not model_path:
+                print(f"Downloading GGUF model from {Config.HF_GGUF_REPO}...")
+                model_path = hf_hub_download(
+                    repo_id=Config.HF_GGUF_REPO,
+                    filename=Config.HF_GGUF_FILE,
+                    token=Config.HF_TOKEN
+                )
+                print(f"Model downloaded to: {model_path}")
+
+            print(f"Loading LlamaCpp model from: {model_path}")
+
+            # Parameters for LlamaCpp
+            return LlamaCpp(
+                model_path=model_path,
+                n_ctx=4096,
+                n_threads=os.cpu_count() or 4,
+                temperature=0,
+                verbose=True
+            )
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
