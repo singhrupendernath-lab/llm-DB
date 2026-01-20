@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFacePipeline
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from config import Config
+from src.config import Config
 import torch
 
 class LLMManager:
@@ -13,15 +13,19 @@ class LLMManager:
 
     def get_llm(self):
         if self.llm_type == "openai":
-            # Using ChatOpenAI as a generic interface for OpenAI-compatible APIs (like Ollama, vLLM, etc.)
             return ChatOpenAI(
                 model=self.model_name,
                 openai_api_key=self.api_key,
-                openai_api_base=self.base_url
+                openai_api_base=self.base_url,
+                temperature=0 # Better for SQL generation
             )
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
-            tokenizer = AutoTokenizer.from_pretrained(self.model_name, token=Config.HF_TOKEN)
+            tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                token=Config.HF_TOKEN,
+                trust_remote_code=True
+            )
 
             # Simple check for GPU availability
             device = 0 if torch.cuda.is_available() else -1
@@ -31,8 +35,10 @@ class LLMManager:
                 model=self.model_name,
                 tokenizer=tokenizer,
                 device=device,
-                max_new_tokens=512,
-                token=Config.HF_TOKEN
+                max_new_tokens=1024, # Increased for better answers
+                token=Config.HF_TOKEN,
+                trust_remote_code=True,
+                repetition_penalty=1.1
             )
             return HuggingFacePipeline(pipeline=pipe)
         else:

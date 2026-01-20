@@ -36,7 +36,8 @@ class TestManagers(unittest.TestCase):
         mock_chat_openai.assert_called_with(
             model="gpt-3.5-turbo",
             openai_api_key="testkey",
-            openai_api_base="https://api.openai.com/v1"
+            openai_api_base="https://api.openai.com/v1",
+            temperature=0
         )
 
     @patch('src.llm_manager.AutoTokenizer')
@@ -45,7 +46,7 @@ class TestManagers(unittest.TestCase):
     @patch('src.llm_manager.HuggingFacePipeline')
     def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_model, mock_tokenizer):
         Config.LLM_TYPE = "huggingface"
-        Config.HF_MODEL_ID = "gpt2" # Using something light for test logic
+        Config.HF_MODEL_ID = "gpt2"
 
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
@@ -55,22 +56,24 @@ class TestManagers(unittest.TestCase):
             "text-generation",
             model="gpt2",
             tokenizer=mock_tokenizer.from_pretrained.return_value,
-            device=-1, # assuming no GPU in test env
-            max_new_tokens=512,
-            token=Config.HF_TOKEN
+            device=-1,
+            max_new_tokens=1024,
+            token=Config.HF_TOKEN,
+            trust_remote_code=True,
+            repetition_penalty=1.1
         )
 
-    @patch('src.oracle_bot.SQLDatabaseChain')
-    def test_oracle_bot(self, mock_db_chain):
+    @patch('src.oracle_bot.create_sql_agent')
+    def test_oracle_bot(self, mock_create_sql_agent):
         mock_db_manager = MagicMock()
         mock_llm_manager = MagicMock()
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
-        mock_db_chain.from_llm.assert_called()
+        mock_create_sql_agent.assert_called()
 
         bot.ask("What is the total sales?")
-        mock_db_chain.from_llm.return_value.invoke.assert_called()
+        mock_create_sql_agent.return_value.invoke.assert_called()
 
 if __name__ == '__main__':
     unittest.main()
