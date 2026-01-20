@@ -45,27 +45,24 @@ class TestManagers(unittest.TestCase):
     @patch('src.llm_manager.AutoTokenizer')
     @patch('src.llm_manager.pipeline')
     @patch('src.llm_manager.HuggingFacePipeline')
-    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_causal, mock_autoconfig):
+    def test_llm_manager_huggingface_gguf(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_causal, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
-        Config.HF_MODEL_ID = "microsoft/Phi-3-mini-4k-instruct"
+        Config.HF_MODEL_ID = "TheBloke/Llama-3-8B-Instruct-GGUF"
+        Config.HF_GGUF_FILE = "llama-3-8b-instruct.Q4_K_M.gguf"
 
-        mock_config = MagicMock()
-        mock_config.model_type = "phi3"
-        mock_autoconfig.from_pretrained.return_value = mock_config
+        mock_autoconfig.from_pretrained.side_effect = Exception("No config") # Simulate GGUF repo missing config
 
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
 
-        mock_tokenizer.from_pretrained.assert_called()
-        mock_pipeline.assert_called_with(
-            "text-generation",
-            model=mock_causal.from_pretrained.return_value,
-            tokenizer=mock_tokenizer.from_pretrained.return_value,
-            device=-1,
-            max_new_tokens=512,
-            repetition_penalty=1.1,
-            truncation=True
+        mock_causal.from_pretrained.assert_called_with(
+            "TheBloke/Llama-3-8B-Instruct-GGUF",
+            token=Config.HF_TOKEN,
+            trust_remote_code=True,
+            gguf_file="llama-3-8b-instruct.Q4_K_M.gguf"
         )
+
+        mock_pipeline.assert_called()
 
     @patch('src.oracle_bot.create_sql_agent')
     def test_oracle_bot(self, mock_create_sql_agent):
@@ -77,7 +74,6 @@ class TestManagers(unittest.TestCase):
 
         mock_create_sql_agent.assert_called()
 
-        # Mocking result with intermediate steps
         mock_create_sql_agent.return_value.invoke.return_value = {
             "output": "Result",
             "intermediate_steps": []

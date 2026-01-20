@@ -22,13 +22,17 @@ class LLMManager:
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
 
-            # Load model config
-            hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
+            # Load model config (may fail for some GGUF repos if config.json is missing, but hf_hub handles it)
+            try:
+                hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
+                model_type = hf_config.model_type
+            except Exception:
+                model_type = "unknown"
 
             # Determine task
             task = Config.HF_TASK
             if not task:
-                if hf_config.model_type in ["t5", "flan-t5", "bart", "marian"]:
+                if model_type in ["t5", "flan-t5", "bart", "marian"]:
                     task = "text2text-generation"
                 else:
                     task = "text-generation"
@@ -37,6 +41,17 @@ class LLMManager:
 
             # Device selection
             device = 0 if torch.cuda.is_available() else -1
+
+            # Loading arguments
+            model_kwargs = {
+                "token": Config.HF_TOKEN,
+                "trust_remote_code": True
+            }
+
+            # GGUF Support
+            if Config.HF_GGUF_FILE:
+                print(f"Loading GGUF file: {Config.HF_GGUF_FILE}")
+                model_kwargs["gguf_file"] = Config.HF_GGUF_FILE
 
             # Explicitly load tokenizer and model
             tokenizer = AutoTokenizer.from_pretrained(
@@ -49,16 +64,12 @@ class LLMManager:
             if task == "text2text-generation":
                 model = AutoModelForSeq2SeqLM.from_pretrained(
                     self.model_name,
-                    token=Config.HF_TOKEN,
-                    trust_remote_code=True,
-                    torch_dtype=torch.float32 # Better for CPU
+                    **model_kwargs
                 )
             else:
                 model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
-                    token=Config.HF_TOKEN,
-                    trust_remote_code=True,
-                    torch_dtype=torch.float32 # Better for CPU
+                    **model_kwargs
                 )
 
             # Create pipeline
@@ -69,10 +80,10 @@ class LLMManager:
                 device=device,
                 max_new_tokens=512,
                 repetition_penalty=1.1,
-                truncation=True
+                truncation=True,
+                model_kwargs={"use_cache": False} if task == "text-generation" else {}
             )
 
-            # Return HuggingFacePipeline
             return HuggingFacePipeline(pipeline=pipe)
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
