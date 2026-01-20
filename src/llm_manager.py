@@ -1,6 +1,6 @@
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFacePipeline
-from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
+from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, pipeline, AutoConfig
 from src.config import Config
 import torch
 
@@ -21,6 +21,21 @@ class LLMManager:
             )
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
+
+            # Load model config to determine the task
+            hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
+
+            # Determine task
+            task = Config.HF_TASK
+            if not task:
+                # Basic auto-detection
+                if hf_config.model_type in ["t5", "flan-t5", "bart", "marian"]:
+                    task = "text2text-generation"
+                else:
+                    task = "text-generation"
+
+            print(f"Detected task: {task}")
+
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 token=Config.HF_TOKEN,
@@ -31,16 +46,18 @@ class LLMManager:
             # Simple check for GPU availability
             device = 0 if torch.cuda.is_available() else -1
 
+            # For Seq2Seq models we might need different loading
+            model_kwargs = {"token": Config.HF_TOKEN, "trust_remote_code": True}
+
             pipe = pipeline(
-                "text-generation",
+                task,
                 model=self.model_name,
                 tokenizer=tokenizer,
                 device=device,
                 max_new_tokens=1024,
-                token=Config.HF_TOKEN,
-                trust_remote_code=True,
                 repetition_penalty=1.1,
-                truncation=True # Handle long inputs by truncating
+                truncation=True,
+                **model_kwargs
             )
             return HuggingFacePipeline(pipeline=pipe)
         else:

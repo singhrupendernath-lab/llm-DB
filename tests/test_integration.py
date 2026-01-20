@@ -40,13 +40,17 @@ class TestManagers(unittest.TestCase):
             temperature=0
         )
 
+    @patch('src.llm_manager.AutoConfig')
     @patch('src.llm_manager.AutoTokenizer')
-    @patch('src.llm_manager.AutoModelForCausalLM')
     @patch('src.llm_manager.pipeline')
     @patch('src.llm_manager.HuggingFacePipeline')
-    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_model, mock_tokenizer):
+    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
         Config.HF_MODEL_ID = "gpt2"
+
+        mock_config = MagicMock()
+        mock_config.model_type = "gpt2"
+        mock_autoconfig.from_pretrained.return_value = mock_config
 
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
@@ -73,6 +77,7 @@ class TestManagers(unittest.TestCase):
     def test_oracle_bot(self, mock_create_sql_agent):
         mock_db_manager = MagicMock()
         mock_llm_manager = MagicMock()
+        mock_db_manager.db_type = "sqlite"
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
