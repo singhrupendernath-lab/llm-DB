@@ -5,11 +5,11 @@ from src.oracle_bot import OracleBot
 from src.config import Config
 
 def main():
-    print("--- Oracle-Llama RAG Bot ---")
+    print(f"--- DB-LLM RAG Bot ({Config.DB_TYPE} + {Config.LLM_TYPE}) ---")
     
     # Initialize managers
-    db_manager = DBManager(use_sqlite=Config.USE_SQLITE, sqlite_path=Config.SQLITE_PATH)
-    llm_manager = LLMManager(model_name=Config.LLM_MODEL)
+    db_manager = DBManager(db_type=Config.DB_TYPE)
+    llm_manager = LLMManager(llm_type=Config.LLM_TYPE)
     
     bot = OracleBot(db_manager, llm_manager)
     
