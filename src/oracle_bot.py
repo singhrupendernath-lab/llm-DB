@@ -5,7 +5,6 @@ except ImportError:
     try:
         from langchain_classic.agents.agent_types import AgentType
     except ImportError:
-        # Fallback if both fail
         class AgentType:
             ZERO_SHOT_REACT_DESCRIPTION = "zero-shot-react-description"
             OPENAI_FUNCTIONS = "openai-functions"
@@ -22,28 +21,30 @@ class OracleBot:
         
         # Determine agent type based on LLM type
         if self.llm_manager.llm_type == "openai":
-            # tool-calling is preferred for newer OpenAI models,
-            # but openai-functions is very stable.
             agent_type = "tool-calling"
         else:
+            # For smaller models, ReAct is hard.
+            # We'll try to use a very structured prompt.
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
-        # Customizing the prompt to match user's "decorated details" requirement
+        # Customizing the prompt
         prefix = (
-            f"You are an expert data assistant for a {self.db_manager.db_type} database. "
-            "Your goal is to provide accurate answers by querying the database and "
-            "then refining and decorating the output for the user.\n\n"
-            f"When answering questions about data from the {self.db_manager.db_type} database:\n"
-            f"1. Generate a syntactically correct {self.db_manager.db_type} SQL query.\n"
-            "2. Execute it and analyze the results.\n"
-            "3. Present the final answer in a refined, 'decorated' format. Use tables (Markdown tables), "
-            "bullet points, or concise summaries to make the data easy to read and professional.\n\n"
-            "If the question is NOT about the database (e.g., general greetings or general knowledge), "
-            "answer it directly without using SQL tools. For example, if asked 'Who are you?', "
-            "explain your role as a database assistant."
+            f"You are an expert data assistant for a {self.db_manager.db_type} database.\n"
+            "You MUST follow the Thought/Action/Action Input/Observation format strictly.\n\n"
+            "Format:\n"
+            "Thought: I need to check the schema of the tables.\n"
+            "Action: sql_db_schema\n"
+            "Action Input: table_name1, table_name2\n"
+            "Observation: [schema details]\n"
+            "... (this can repeat)\n"
+            "Thought: I now know the final answer.\n"
+            "Final Answer: Your refined and decorated answer here.\n\n"
+            "Guidelines:\n"
+            f"1. Only use {self.db_manager.db_type} SQL syntax.\n"
+            "2. Present the final answer in a refined Markdown format with tables or bullet points.\n"
+            "3. If the question is general (like 'Hi' or 'Who are you?'), use 'Final Answer:' immediately.\n"
         )
 
-        # Initialize the SQL Agent with the custom prefix
         self.agent_executor = create_sql_agent(
             llm=self.llm,
             db=self.db,
