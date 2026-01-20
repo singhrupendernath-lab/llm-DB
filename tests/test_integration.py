@@ -51,7 +51,12 @@ class TestManagers(unittest.TestCase):
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
 
-        mock_tokenizer.from_pretrained.assert_called()
+        mock_tokenizer.from_pretrained.assert_called_with(
+            "gpt2",
+            token=Config.HF_TOKEN,
+            trust_remote_code=True,
+            model_max_length=Config.HF_MAX_LENGTH
+        )
         mock_pipeline.assert_called_with(
             "text-generation",
             model="gpt2",
@@ -60,7 +65,8 @@ class TestManagers(unittest.TestCase):
             max_new_tokens=1024,
             token=Config.HF_TOKEN,
             trust_remote_code=True,
-            repetition_penalty=1.1
+            repetition_penalty=1.1,
+            truncation=True
         )
 
     @patch('src.oracle_bot.create_sql_agent')

@@ -22,6 +22,9 @@ class Config:
     # SQLite connection details
     SQLITE_PATH = os.getenv("SQLITE_PATH", "demo.db")
 
+    # Optional: comma-separated list of tables to include
+    INCLUDE_TABLES = os.getenv("INCLUDE_TABLES", "").split(",") if os.getenv("INCLUDE_TABLES") else None
+
     # Legacy support for USE_SQLITE
     USE_SQLITE = os.getenv("USE_SQLITE", "True").lower() == "true"
     if DB_TYPE == "sqlite" and not USE_SQLITE:
@@ -40,3 +43,4 @@ class Config:
     # Hugging Face config
     HF_MODEL_ID = os.getenv("HF_MODEL_ID", "google/flan-t5-large")
     HF_TOKEN = os.getenv("HF_TOKEN")
+    HF_MAX_LENGTH = int(os.getenv("HF_MAX_LENGTH", "2048"))

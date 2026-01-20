@@ -11,7 +11,6 @@ class OracleBot:
         self.db = self.db_manager.get_db()
         
         # Initialize the SQL Agent
-        # We let create_sql_agent choose the best agent type for the LLM
         self.agent_executor = create_sql_agent(
             llm=self.llm,
             db=self.db,
@@ -24,7 +23,6 @@ class OracleBot:
         if format_instruction:
             full_query += f"\n\nPlease format the output as follows: {format_instruction}"
         
-        # Instruction to handle both DB and general queries
         instruction = (
             "You are a helpful assistant that can query a database to answer questions. "
             "If the question is about the data in the database, use the provided tools to query it. "
@@ -36,10 +34,8 @@ class OracleBot:
             result = self.agent_executor.invoke({"input": f"{instruction}\nQuestion: {full_query}"})
             return result["output"]
         except Exception as e:
-            # Fallback if the agent fails completely
             try:
                 print(f"Agent failed, falling back to direct LLM: {e}")
-                # Some LLMs might not support invoke directly or might return different objects
                 if hasattr(self.llm, 'invoke'):
                     response = self.llm.invoke(full_query)
                     return response.content if hasattr(response, 'content') else str(response)

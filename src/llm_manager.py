@@ -17,14 +17,15 @@ class LLMManager:
                 model=self.model_name,
                 openai_api_key=self.api_key,
                 openai_api_base=self.base_url,
-                temperature=0 # Better for SQL generation
+                temperature=0
             )
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 token=Config.HF_TOKEN,
-                trust_remote_code=True
+                trust_remote_code=True,
+                model_max_length=Config.HF_MAX_LENGTH
             )
 
             # Simple check for GPU availability
@@ -35,10 +36,11 @@ class LLMManager:
                 model=self.model_name,
                 tokenizer=tokenizer,
                 device=device,
-                max_new_tokens=1024, # Increased for better answers
+                max_new_tokens=1024,
                 token=Config.HF_TOKEN,
                 trust_remote_code=True,
-                repetition_penalty=1.1
+                repetition_penalty=1.1,
+                truncation=True # Handle long inputs by truncating
             )
             return HuggingFacePipeline(pipeline=pipe)
         else:
