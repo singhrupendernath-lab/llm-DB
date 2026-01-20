@@ -1,7 +1,7 @@
 from langchain_openai import ChatOpenAI
 from langchain_huggingface import HuggingFacePipeline
 from transformers import AutoModelForCausalLM, AutoTokenizer, pipeline
-from src.config import Config
+from config import Config
 import torch
 
 class LLMManager:

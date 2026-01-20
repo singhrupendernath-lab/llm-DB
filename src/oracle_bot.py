@@ -1,7 +1,7 @@
 from langchain_community.agent_toolkits import create_sql_agent
 from langchain_community.agent_toolkits.sql.toolkit import SQLDatabaseToolkit
-from .db_manager import DBManager
-from .llm_manager import LLMManager
+from db_manager import DBManager
+from llm_manager import LLMManager
 
 class OracleBot:
     def __init__(self, db_manager: DBManager, llm_manager: LLMManager):
