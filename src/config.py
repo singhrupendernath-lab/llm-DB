@@ -17,7 +17,7 @@ class Config:
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
     MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
     MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-    MYSQL_DB = os.getenv("MYSQL_DB", "demo")
+    MYSQL_DB = os.getenv("MYSQL_DB", "MCA")
 
     # SQLite connection details
     SQLITE_PATH = os.getenv("SQLITE_PATH", "demo.db")
