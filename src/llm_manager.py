@@ -36,29 +36,22 @@ class LLMManager:
 
             print(f"Detected task: {task}")
 
-            tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name,
-                token=Config.HF_TOKEN,
-                trust_remote_code=True,
-                model_max_length=Config.HF_MAX_LENGTH
-            )
-
             # Simple check for GPU availability
             device = 0 if torch.cuda.is_available() else -1
 
-            # For Seq2Seq models we might need different loading
-            model_kwargs = {"token": Config.HF_TOKEN, "trust_remote_code": True}
-
-            pipe = pipeline(
-                task,
-                model=self.model_name,
-                tokenizer=tokenizer,
+            # Using from_model_id which is more robust for langchain-huggingface integration
+            # This handles the pipeline creation internally and avoids the Thread-1 TypeError
+            return HuggingFacePipeline.from_model_id(
+                model_id=self.model_name,
+                task=task,
                 device=device,
-                max_new_tokens=1024,
-                repetition_penalty=1.1,
-                truncation=True,
-                **model_kwargs
+                pipeline_kwargs={
+                    "max_new_tokens": 1024,
+                    "repetition_penalty": 1.1,
+                    "truncation": True,
+                    "trust_remote_code": True,
+                    "token": Config.HF_TOKEN
+                }
             )
-            return HuggingFacePipeline(pipeline=pipe)
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
