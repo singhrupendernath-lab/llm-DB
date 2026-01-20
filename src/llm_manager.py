@@ -50,18 +50,17 @@ class LLMManager:
                 model = AutoModelForSeq2SeqLM.from_pretrained(
                     self.model_name,
                     token=Config.HF_TOKEN,
-                    trust_remote_code=True,
-                    torch_dtype=torch.float32 # Better for CPU
+                    trust_remote_code=True
                 )
             else:
                 model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
                     token=Config.HF_TOKEN,
-                    trust_remote_code=True,
-                    torch_dtype=torch.float32 # Better for CPU
+                    trust_remote_code=True
                 )
 
             # Create pipeline
+            # Added use_cache=False to avoid attribute errors in some model versions
             pipe = pipeline(
                 task,
                 model=model,
@@ -69,10 +68,10 @@ class LLMManager:
                 device=device,
                 max_new_tokens=512,
                 repetition_penalty=1.1,
-                truncation=True
+                truncation=True,
+                model_kwargs={"use_cache": False} if task == "text-generation" else {}
             )
 
-            # Return HuggingFacePipeline
             return HuggingFacePipeline(pipeline=pipe)
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")

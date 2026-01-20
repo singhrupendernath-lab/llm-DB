@@ -41,7 +41,7 @@ class Config:
     LLM_MODEL = os.getenv("LLM_MODEL", "llama3")
     
     # Hugging Face config
-    HF_MODEL_ID = os.getenv("HF_MODEL_ID", "microsoft/Phi-3-mini-4k-instruct")
+    HF_MODEL_ID = os.getenv("HF_MODEL_ID", "Qwen/Qwen2.5-1.5B-Instruct")
     HF_TOKEN = os.getenv("HF_TOKEN")
     HF_MAX_LENGTH = int(os.getenv("HF_MAX_LENGTH", "2048"))
     HF_TASK = os.getenv("HF_TASK") # e.g., 'text-generation' or 'text2text-generation'

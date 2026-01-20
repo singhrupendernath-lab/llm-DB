@@ -47,10 +47,10 @@ class TestManagers(unittest.TestCase):
     @patch('src.llm_manager.HuggingFacePipeline')
     def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_causal, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
-        Config.HF_MODEL_ID = "microsoft/Phi-3-mini-4k-instruct"
+        Config.HF_MODEL_ID = "Qwen/Qwen2.5-1.5B-Instruct"
 
         mock_config = MagicMock()
-        mock_config.model_type = "phi3"
+        mock_config.model_type = "qwen2"
         mock_autoconfig.from_pretrained.return_value = mock_config
 
         llm_manager = LLMManager(llm_type="huggingface")
@@ -64,7 +64,8 @@ class TestManagers(unittest.TestCase):
             device=-1,
             max_new_tokens=512,
             repetition_penalty=1.1,
-            truncation=True
+            truncation=True,
+            model_kwargs={"use_cache": False}
         )
 
     @patch('src.oracle_bot.create_sql_agent')
@@ -77,7 +78,6 @@ class TestManagers(unittest.TestCase):
 
         mock_create_sql_agent.assert_called()
 
-        # Mocking result with intermediate steps
         mock_create_sql_agent.return_value.invoke.return_value = {
             "output": "Result",
             "intermediate_steps": []

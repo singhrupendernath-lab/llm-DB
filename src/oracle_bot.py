@@ -19,30 +19,30 @@ class OracleBot:
         self.llm = self.llm_manager.get_llm()
         self.db = self.db_manager.get_db()
         
-        # Determine agent type based on LLM type
+        # Determine agent type
         if self.llm_manager.llm_type == "openai":
             agent_type = "tool-calling"
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
-        # Optimized prompt for Instruct models like Phi-3
+        # Professional prompt for Qwen and other Instruct models
         prefix = (
-            f"You are a professional Data Analyst assistant. You have access to a {self.db_manager.db_type} database.\n"
-            "Your job is to answer the user's question by querying the database and providing a refined, decorated response.\n\n"
-            "STRICT RULES:\n"
-            "1. Use ONLY the tools provided to query the database.\n"
-            "2. If you don't know the answer or the database doesn't have the info, say so.\n"
-            "3. Format your final answer using Markdown (tables, lists) to make it easy to read.\n"
-            "4. For general greetings, answer directly without using any tools.\n\n"
-            "You MUST use the following format for database queries:\n"
-            "Thought: I should look at the schema of the relevant tables.\n"
-            "Action: sql_db_schema\n"
-            "Action Input: table_name1, table_name2\n"
-            "Observation: [schema output]\n"
-            "... (repeat if needed)\n"
-            "Thought: I have the data. I will now provide the final answer.\n"
+            f"You are a highly skilled Data Analyst assistant. You have access to a {self.db_manager.db_type} database.\n"
+            "Your mission is to provide accurate, decorated, and refined answers based on the database content.\n\n"
+            "OPERATING INSTRUCTIONS:\n"
+            "1. Always use the 'sql_db_schema' tool first to understand the table structure before writing a query.\n"
+            "2. Generate syntactically correct SQL for the database type.\n"
+            "3. After receiving data, present it in a professional format (Markdown tables, lists).\n"
+            "4. For general conversational queries (e.g. 'How are you?'), answer directly without database tools.\n\n"
+            "RESPONSE FORMAT (Strictly follow this):\n"
+            "Thought: [Your reasoning step-by-step]\n"
+            "Action: [Tool Name]\n"
+            "Action Input: [Tool Input]\n"
+            "Observation: [Result from Tool]\n"
+            "... (Repeat as necessary)\n"
+            "Thought: I have the final data to answer the user.\n"
             "Final Answer: [Your decorated result here]\n\n"
-            f"Currently working on: {self.db_manager.db_type} database."
+            f"Database Platform: {self.db_manager.db_type}"
         )
 
         self.agent_executor = create_sql_agent(
@@ -63,7 +63,6 @@ class OracleBot:
         try:
             result = self.agent_executor.invoke({"input": full_query})
 
-            # Extract SQL queries from intermediate steps
             sql_queries = []
             for step in result.get("intermediate_steps", []):
                 if hasattr(step[0], 'tool') and step[0].tool == "sql_db_query":
