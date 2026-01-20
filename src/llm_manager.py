@@ -3,6 +3,7 @@ from langchain_huggingface import HuggingFacePipeline
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, pipeline, AutoConfig
 from config import Config
 import torch
+import os
 
 class LLMManager:
     def __init__(self, llm_type=None, model_name=None):
@@ -22,11 +23,12 @@ class LLMManager:
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
 
-            # Load model config (may fail for some GGUF repos if config.json is missing, but hf_hub handles it)
             try:
+                # Load model config
                 hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
                 model_type = hf_config.model_type
-            except Exception:
+            except Exception as e:
+                print(f"Warning: Could not load config for {self.model_name}: {e}")
                 model_type = "unknown"
 
             # Determine task
@@ -42,34 +44,45 @@ class LLMManager:
             # Device selection
             device = 0 if torch.cuda.is_available() else -1
 
-            # Loading arguments
+            # Explicitly load tokenizer and model
             model_kwargs = {
                 "token": Config.HF_TOKEN,
                 "trust_remote_code": True
             }
 
-            # GGUF Support
             if Config.HF_GGUF_FILE:
                 print(f"Loading GGUF file: {Config.HF_GGUF_FILE}")
                 model_kwargs["gguf_file"] = Config.HF_GGUF_FILE
 
-            # Explicitly load tokenizer and model
-            tokenizer = AutoTokenizer.from_pretrained(
-                self.model_name,
-                token=Config.HF_TOKEN,
-                trust_remote_code=True,
-                model_max_length=Config.HF_MAX_LENGTH
-            )
-
-            if task == "text2text-generation":
-                model = AutoModelForSeq2SeqLM.from_pretrained(
+            try:
+                tokenizer = AutoTokenizer.from_pretrained(
                     self.model_name,
-                    **model_kwargs
+                    token=Config.HF_TOKEN,
+                    trust_remote_code=True,
+                    model_max_length=Config.HF_MAX_LENGTH
                 )
-            else:
-                model = AutoModelForCausalLM.from_pretrained(
-                    self.model_name,
-                    **model_kwargs
+
+                if task == "text2text-generation":
+                    model = AutoModelForSeq2SeqLM.from_pretrained(
+                        self.model_name,
+                        **model_kwargs
+                    )
+                else:
+                    model = AutoModelForCausalLM.from_pretrained(
+                        self.model_name,
+                        **model_kwargs
+                    )
+
+                # Force disable cache to avoid 'DynamicCache' object has no attribute 'seen_tokens'
+                if hasattr(model, 'config'):
+                    model.config.use_cache = False
+
+            except Exception as e:
+                raise RuntimeError(
+                    f"Failed to load model '{self.model_name}'. "
+                    f"Error: {e}. \n"
+                    "Tip: If using Llama-3, ensure you have accepted the license on Hugging Face "
+                    "and provided a valid HF_TOKEN in your .env file."
                 )
 
             # Create pipeline
@@ -80,8 +93,7 @@ class LLMManager:
                 device=device,
                 max_new_tokens=512,
                 repetition_penalty=1.1,
-                truncation=True,
-                model_kwargs={"use_cache": False} if task == "text-generation" else {}
+                truncation=True
             )
 
             return HuggingFacePipeline(pipeline=pipe)
