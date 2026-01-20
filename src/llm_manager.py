@@ -22,7 +22,7 @@ class LLMManager:
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model: {self.model_name}...")
 
-            # Load model config to determine the task
+            # Load model config
             hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
 
             # Determine task
@@ -35,32 +35,44 @@ class LLMManager:
 
             print(f"Detected task: {task}")
 
-            # Simple check for GPU availability
+            # Device selection
             device = 0 if torch.cuda.is_available() else -1
 
-            # Explicitly load model and tokenizer to avoid auto-detection issues in LangChain
-            model_kwargs = {
-                "token": Config.HF_TOKEN,
-                "trust_remote_code": True,
-            }
+            # Explicitly load tokenizer and model
+            tokenizer = AutoTokenizer.from_pretrained(
+                self.model_name,
+                token=Config.HF_TOKEN,
+                trust_remote_code=True,
+                model_max_length=Config.HF_MAX_LENGTH
+            )
 
-            tokenizer = AutoTokenizer.from_pretrained(self.model_name, **model_kwargs)
             if task == "text2text-generation":
-                model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name, **model_kwargs)
+                model = AutoModelForSeq2SeqLM.from_pretrained(
+                    self.model_name,
+                    token=Config.HF_TOKEN,
+                    trust_remote_code=True,
+                    torch_dtype=torch.float32 # Better for CPU
+                )
             else:
-                model = AutoModelForCausalLM.from_pretrained(self.model_name, **model_kwargs)
+                model = AutoModelForCausalLM.from_pretrained(
+                    self.model_name,
+                    token=Config.HF_TOKEN,
+                    trust_remote_code=True,
+                    torch_dtype=torch.float32 # Better for CPU
+                )
 
+            # Create pipeline
             pipe = pipeline(
                 task,
                 model=model,
                 tokenizer=tokenizer,
                 device=device,
-                max_new_tokens=1024,
+                max_new_tokens=512,
                 repetition_penalty=1.1,
                 truncation=True
             )
 
-            # Use HuggingFacePipeline with the explicit pipeline object
+            # Return HuggingFacePipeline
             return HuggingFacePipeline(pipeline=pipe)
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
