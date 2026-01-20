@@ -8,7 +8,7 @@ def main():
     print(f"--- DB-LLM RAG Bot ({Config.DB_TYPE} + {Config.LLM_TYPE}) ---")
     
     # Initialize managers
-    db_manager = DBManager(db_type=Config.DB_TYPE)
+    db_manager = DBManager(db_type=Config.DB_TYPE, include_tables=Config.INCLUDE_TABLES)
     llm_manager = LLMManager(llm_type=Config.LLM_TYPE)
     
     bot = OracleBot(db_manager, llm_manager)
