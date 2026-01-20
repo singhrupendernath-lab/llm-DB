@@ -41,16 +41,16 @@ class TestManagers(unittest.TestCase):
         )
 
     @patch('src.llm_manager.AutoConfig')
-    @patch('src.llm_manager.AutoModelForSeq2SeqLM')
+    @patch('src.llm_manager.AutoModelForCausalLM')
     @patch('src.llm_manager.AutoTokenizer')
     @patch('src.llm_manager.pipeline')
     @patch('src.llm_manager.HuggingFacePipeline')
-    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_seq2seq, mock_autoconfig):
+    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_causal, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
-        Config.HF_MODEL_ID = "google/flan-t5-large"
+        Config.HF_MODEL_ID = "microsoft/Phi-3-mini-4k-instruct"
 
         mock_config = MagicMock()
-        mock_config.model_type = "t5"
+        mock_config.model_type = "phi3"
         mock_autoconfig.from_pretrained.return_value = mock_config
 
         llm_manager = LLMManager(llm_type="huggingface")
@@ -58,11 +58,11 @@ class TestManagers(unittest.TestCase):
 
         mock_tokenizer.from_pretrained.assert_called()
         mock_pipeline.assert_called_with(
-            "text2text-generation",
-            model=mock_seq2seq.from_pretrained.return_value,
+            "text-generation",
+            model=mock_causal.from_pretrained.return_value,
             tokenizer=mock_tokenizer.from_pretrained.return_value,
             device=-1,
-            max_new_tokens=1024,
+            max_new_tokens=512,
             repetition_penalty=1.1,
             truncation=True
         )

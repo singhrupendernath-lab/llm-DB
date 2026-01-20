@@ -25,20 +25,24 @@ class OracleBot:
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
-        # Customizing the prompt
+        # Optimized prompt for Instruct models like Phi-3
         prefix = (
-            f"You are an expert data assistant for a {self.db_manager.db_type} database.\n"
-            "You MUST use the following format strictly:\n"
-            "Thought: I need to query the database to answer the question.\n"
+            f"You are a professional Data Analyst assistant. You have access to a {self.db_manager.db_type} database.\n"
+            "Your job is to answer the user's question by querying the database and providing a refined, decorated response.\n\n"
+            "STRICT RULES:\n"
+            "1. Use ONLY the tools provided to query the database.\n"
+            "2. If you don't know the answer or the database doesn't have the info, say so.\n"
+            "3. Format your final answer using Markdown (tables, lists) to make it easy to read.\n"
+            "4. For general greetings, answer directly without using any tools.\n\n"
+            "You MUST use the following format for database queries:\n"
+            "Thought: I should look at the schema of the relevant tables.\n"
             "Action: sql_db_schema\n"
-            "Action Input: [table_names]\n"
-            "Observation: [schema results]\n"
+            "Action Input: table_name1, table_name2\n"
+            "Observation: [schema output]\n"
             "... (repeat if needed)\n"
-            "Thought: I have the information needed.\n"
-            "Final Answer: [Your decorated and refined answer]\n\n"
-            f"Database Type: {self.db_manager.db_type}\n"
-            "Only answer general questions if they don't require database access. "
-            "Always try to provide the final answer in a Markdown table for data results."
+            "Thought: I have the data. I will now provide the final answer.\n"
+            "Final Answer: [Your decorated result here]\n\n"
+            f"Currently working on: {self.db_manager.db_type} database."
         )
 
         self.agent_executor = create_sql_agent(
@@ -48,7 +52,7 @@ class OracleBot:
             agent_type=agent_type,
             handle_parsing_errors=True,
             prefix=prefix,
-            return_intermediate_steps=True # Enable capturing intermediate steps
+            return_intermediate_steps=True
         )
 
     def ask(self, question: str, format_instruction: str = None):
@@ -62,9 +66,8 @@ class OracleBot:
             # Extract SQL queries from intermediate steps
             sql_queries = []
             for step in result.get("intermediate_steps", []):
-                action = step[0]
-                if action.tool == "sql_db_query":
-                    sql_queries.append(action.tool_input)
+                if hasattr(step[0], 'tool') and step[0].tool == "sql_db_query":
+                    sql_queries.append(step[0].tool_input)
 
             return {
                 "answer": result["output"],
