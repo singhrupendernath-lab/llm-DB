@@ -41,10 +41,8 @@ class TestManagers(unittest.TestCase):
         )
 
     @patch('src.llm_manager.AutoConfig')
-    @patch('src.llm_manager.AutoTokenizer')
-    @patch('src.llm_manager.pipeline')
     @patch('src.llm_manager.HuggingFacePipeline')
-    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_autoconfig):
+    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
         Config.HF_MODEL_ID = "gpt2"
 
@@ -55,22 +53,17 @@ class TestManagers(unittest.TestCase):
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
 
-        mock_tokenizer.from_pretrained.assert_called_with(
-            "gpt2",
-            token=Config.HF_TOKEN,
-            trust_remote_code=True,
-            model_max_length=Config.HF_MAX_LENGTH
-        )
-        mock_pipeline.assert_called_with(
-            "text-generation",
-            model="gpt2",
-            tokenizer=mock_tokenizer.from_pretrained.return_value,
+        mock_hf_pipeline.from_model_id.assert_called_with(
+            model_id="gpt2",
+            task="text-generation",
             device=-1,
-            max_new_tokens=1024,
-            token=Config.HF_TOKEN,
-            trust_remote_code=True,
-            repetition_penalty=1.1,
-            truncation=True
+            pipeline_kwargs={
+                "max_new_tokens": 1024,
+                "repetition_penalty": 1.1,
+                "truncation": True,
+                "trust_remote_code": True,
+                "token": Config.HF_TOKEN
+            }
         )
 
     @patch('src.oracle_bot.create_sql_agent')

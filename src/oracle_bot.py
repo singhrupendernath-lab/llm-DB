@@ -23,26 +23,23 @@ class OracleBot:
         if self.llm_manager.llm_type == "openai":
             agent_type = "tool-calling"
         else:
-            # For smaller models, ReAct is hard.
-            # We'll try to use a very structured prompt.
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
         # Customizing the prompt
+        # We provide a more explicit format for smaller models (like FLAN-T5)
         prefix = (
             f"You are an expert data assistant for a {self.db_manager.db_type} database.\n"
-            "You MUST follow the Thought/Action/Action Input/Observation format strictly.\n\n"
-            "Format:\n"
-            "Thought: I need to check the schema of the tables.\n"
+            "You MUST use the following format strictly:\n"
+            "Thought: I need to query the database to answer the question.\n"
             "Action: sql_db_schema\n"
-            "Action Input: table_name1, table_name2\n"
-            "Observation: [schema details]\n"
-            "... (this can repeat)\n"
-            "Thought: I now know the final answer.\n"
-            "Final Answer: Your refined and decorated answer here.\n\n"
-            "Guidelines:\n"
-            f"1. Only use {self.db_manager.db_type} SQL syntax.\n"
-            "2. Present the final answer in a refined Markdown format with tables or bullet points.\n"
-            "3. If the question is general (like 'Hi' or 'Who are you?'), use 'Final Answer:' immediately.\n"
+            "Action Input: [table_names]\n"
+            "Observation: [schema results]\n"
+            "... (repeat if needed)\n"
+            "Thought: I have the information needed.\n"
+            "Final Answer: [Your decorated and refined answer]\n\n"
+            f"Database Type: {self.db_manager.db_type}\n"
+            "Only answer general questions if they don't require database access. "
+            "Always try to provide the final answer in a Markdown table for data results."
         )
 
         self.agent_executor = create_sql_agent(
@@ -65,11 +62,11 @@ class OracleBot:
         except Exception as e:
             try:
                 print(f"Agent failed, falling back to direct LLM: {e}")
-                if hasattr(self.llm, 'invoke'):
-                    response = self.llm.invoke(full_query)
-                    return response.content if hasattr(response, 'content') else str(response)
-                else:
-                    return str(e)
+                # Some small models might just return a string, others an object
+                response = self.llm.invoke(full_query)
+                if hasattr(response, 'content'):
+                    return response.content
+                return str(response)
             except Exception as e2:
                 return f"Error occurred: {str(e)} and fallback also failed: {str(e2)}"
 
