@@ -41,29 +41,30 @@ class TestManagers(unittest.TestCase):
         )
 
     @patch('src.llm_manager.AutoConfig')
+    @patch('src.llm_manager.AutoModelForSeq2SeqLM')
+    @patch('src.llm_manager.AutoTokenizer')
+    @patch('src.llm_manager.pipeline')
     @patch('src.llm_manager.HuggingFacePipeline')
-    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_autoconfig):
+    def test_llm_manager_huggingface(self, mock_hf_pipeline, mock_pipeline, mock_tokenizer, mock_seq2seq, mock_autoconfig):
         Config.LLM_TYPE = "huggingface"
-        Config.HF_MODEL_ID = "gpt2"
+        Config.HF_MODEL_ID = "google/flan-t5-large"
 
         mock_config = MagicMock()
-        mock_config.model_type = "gpt2"
+        mock_config.model_type = "t5"
         mock_autoconfig.from_pretrained.return_value = mock_config
 
         llm_manager = LLMManager(llm_type="huggingface")
         llm_manager.get_llm()
 
-        mock_hf_pipeline.from_model_id.assert_called_with(
-            model_id="gpt2",
-            task="text-generation",
+        mock_tokenizer.from_pretrained.assert_called()
+        mock_pipeline.assert_called_with(
+            "text2text-generation",
+            model=mock_seq2seq.from_pretrained.return_value,
+            tokenizer=mock_tokenizer.from_pretrained.return_value,
             device=-1,
-            pipeline_kwargs={
-                "max_new_tokens": 1024,
-                "repetition_penalty": 1.1,
-                "truncation": True,
-                "trust_remote_code": True,
-                "token": Config.HF_TOKEN
-            }
+            max_new_tokens=1024,
+            repetition_penalty=1.1,
+            truncation=True
         )
 
     @patch('src.oracle_bot.create_sql_agent')
@@ -75,6 +76,12 @@ class TestManagers(unittest.TestCase):
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
         mock_create_sql_agent.assert_called()
+
+        # Mocking result with intermediate steps
+        mock_create_sql_agent.return_value.invoke.return_value = {
+            "output": "Result",
+            "intermediate_steps": []
+        }
 
         bot.ask("What is the total sales?")
         mock_create_sql_agent.return_value.invoke.assert_called()

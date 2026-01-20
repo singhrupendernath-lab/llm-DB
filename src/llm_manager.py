@@ -28,7 +28,6 @@ class LLMManager:
             # Determine task
             task = Config.HF_TASK
             if not task:
-                # Basic auto-detection
                 if hf_config.model_type in ["t5", "flan-t5", "bart", "marian"]:
                     task = "text2text-generation"
                 else:
@@ -39,19 +38,29 @@ class LLMManager:
             # Simple check for GPU availability
             device = 0 if torch.cuda.is_available() else -1
 
-            # Using from_model_id which is more robust for langchain-huggingface integration
-            # This handles the pipeline creation internally and avoids the Thread-1 TypeError
-            return HuggingFacePipeline.from_model_id(
-                model_id=self.model_name,
-                task=task,
+            # Explicitly load model and tokenizer to avoid auto-detection issues in LangChain
+            model_kwargs = {
+                "token": Config.HF_TOKEN,
+                "trust_remote_code": True,
+            }
+
+            tokenizer = AutoTokenizer.from_pretrained(self.model_name, **model_kwargs)
+            if task == "text2text-generation":
+                model = AutoModelForSeq2SeqLM.from_pretrained(self.model_name, **model_kwargs)
+            else:
+                model = AutoModelForCausalLM.from_pretrained(self.model_name, **model_kwargs)
+
+            pipe = pipeline(
+                task,
+                model=model,
+                tokenizer=tokenizer,
                 device=device,
-                pipeline_kwargs={
-                    "max_new_tokens": 1024,
-                    "repetition_penalty": 1.1,
-                    "truncation": True,
-                    "trust_remote_code": True,
-                    "token": Config.HF_TOKEN
-                }
+                max_new_tokens=1024,
+                repetition_penalty=1.1,
+                truncation=True
             )
+
+            # Use HuggingFacePipeline with the explicit pipeline object
+            return HuggingFacePipeline(pipeline=pipe)
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")

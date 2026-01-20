@@ -26,7 +26,6 @@ class OracleBot:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
         # Customizing the prompt
-        # We provide a more explicit format for smaller models (like FLAN-T5)
         prefix = (
             f"You are an expert data assistant for a {self.db_manager.db_type} database.\n"
             "You MUST use the following format strictly:\n"
@@ -48,7 +47,8 @@ class OracleBot:
             verbose=True,
             agent_type=agent_type,
             handle_parsing_errors=True,
-            prefix=prefix
+            prefix=prefix,
+            return_intermediate_steps=True # Enable capturing intermediate steps
         )
 
     def ask(self, question: str, format_instruction: str = None):
@@ -58,17 +58,33 @@ class OracleBot:
         
         try:
             result = self.agent_executor.invoke({"input": full_query})
-            return result["output"]
+
+            # Extract SQL queries from intermediate steps
+            sql_queries = []
+            for step in result.get("intermediate_steps", []):
+                action = step[0]
+                if action.tool == "sql_db_query":
+                    sql_queries.append(action.tool_input)
+
+            return {
+                "answer": result["output"],
+                "sql_queries": sql_queries
+            }
         except Exception as e:
             try:
                 print(f"Agent failed, falling back to direct LLM: {e}")
-                # Some small models might just return a string, others an object
                 response = self.llm.invoke(full_query)
-                if hasattr(response, 'content'):
-                    return response.content
-                return str(response)
+                answer = response.content if hasattr(response, 'content') else str(response)
+                return {
+                    "answer": answer,
+                    "sql_queries": [],
+                    "error": str(e)
+                }
             except Exception as e2:
-                return f"Error occurred: {str(e)} and fallback also failed: {str(e2)}"
+                return {
+                    "answer": f"Error occurred: {str(e)} and fallback also failed: {str(e2)}",
+                    "sql_queries": []
+                }
 
     def generate_report(self, report_description: str, format_type: str = "table"):
         prompt = f"Generate a detailed report for: {report_description}. Output format: {format_type}."

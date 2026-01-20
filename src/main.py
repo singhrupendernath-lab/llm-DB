@@ -17,9 +17,15 @@ def main():
         # One-off query from CLI
         query = " ".join(sys.argv[1:])
         print(f"Querying: {query}")
-        result = bot.ask(query)
+        result_dict = bot.ask(query)
+
+        if result_dict.get("sql_queries"):
+            print("\nExecuted SQL Queries:")
+            for sql in result_dict["sql_queries"]:
+                print(f"  {sql}")
+
         print("\nResult:")
-        print(result)
+        print(result_dict["answer"])
     else:
         # Interactive mode
         print("Enter your queries (type 'exit' to quit):")
@@ -31,8 +37,18 @@ def main():
                 
                 format_instruction = input("Format instruction (optional, press Enter to skip): ")
                 
-                result = bot.ask(user_input, format_instruction if format_instruction else None)
-                print(f"\nBot: {result}")
+                result_dict = bot.ask(user_input, format_instruction if format_instruction else None)
+
+                if result_dict.get("sql_queries"):
+                    print("\n[SQL Queries Executed]")
+                    for sql in result_dict["sql_queries"]:
+                        print(f"  {sql}")
+
+                print(f"\nBot: {result_dict['answer']}")
+
+                if "error" in result_dict:
+                    print(f"(Note: An internal error occurred but fallback was used: {result_dict['error']})")
+
             except KeyboardInterrupt:
                 break
             except Exception as e:

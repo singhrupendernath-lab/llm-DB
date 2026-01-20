@@ -20,10 +20,13 @@ class TestOracleBot(unittest.TestCase):
         bot = OracleBot(db_manager, llm_manager)
         
         # Mocking the agent's invoke method
-        mock_agent_executor.invoke.return_value = {"output": "There are 2 employees in Sales."}
+        mock_agent_executor.invoke.return_value = {
+            "output": "There are 2 employees in Sales.",
+            "intermediate_steps": []
+        }
         
         result = bot.ask("How many employees are in Sales?")
-        self.assertEqual(result, "There are 2 employees in Sales.")
+        self.assertEqual(result["answer"], "There are 2 employees in Sales.")
         mock_agent_executor.invoke.assert_called_once()
 
 if __name__ == "__main__":
