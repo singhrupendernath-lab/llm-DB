@@ -25,24 +25,25 @@ class OracleBot:
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
-        # Professional prompt for Qwen and other Instruct models
+        # Highly structured prompt for modern Instruct models (Llama 3, Qwen, Phi-3)
         prefix = (
-            f"You are a highly skilled Data Analyst assistant. You have access to a {self.db_manager.db_type} database.\n"
-            "Your mission is to provide accurate, decorated, and refined answers based on the database content.\n\n"
-            "OPERATING INSTRUCTIONS:\n"
-            "1. Always use the 'sql_db_schema' tool first to understand the table structure before writing a query.\n"
-            "2. Generate syntactically correct SQL for the database type.\n"
-            "3. After receiving data, present it in a professional format (Markdown tables, lists).\n"
-            "4. For general conversational queries (e.g. 'How are you?'), answer directly without database tools.\n\n"
-            "RESPONSE FORMAT (Strictly follow this):\n"
-            "Thought: [Your reasoning step-by-step]\n"
+            f"You are a professional Data Analyst assistant. You have access to a {self.db_manager.db_type} database.\n"
+            "Your goal is to provide accurate, decorated, and refined answers based on the database content.\n\n"
+            "STRICT RULES:\n"
+            "1. ALWAYS use 'sql_db_schema' to understand table structures before querying.\n"
+            f"2. Generate syntactically correct {self.db_manager.db_type} SQL queries.\n"
+            "3. Present data results in professional Markdown tables or lists.\n"
+            "4. For general greetings or role questions, answer directly without tools.\n\n"
+            "FORMAT TO FOLLOW:\n"
+            "Thought: [Brief reasoning]\n"
             "Action: [Tool Name]\n"
-            "Action Input: [Tool Input]\n"
-            "Observation: [Result from Tool]\n"
-            "... (Repeat as necessary)\n"
-            "Thought: I have the final data to answer the user.\n"
-            "Final Answer: [Your decorated result here]\n\n"
-            f"Database Platform: {self.db_manager.db_type}"
+            "Action Input: [Input for the tool]\n"
+            "Observation: [Tool result]\n"
+            "... (repeat as necessary)\n"
+            "Thought: I have the information needed.\n"
+            "Final Answer: [Your refined response here]\n\n"
+            f"Database Platform: {self.db_manager.db_type}\n"
+            "Begin!"
         )
 
         self.agent_executor = create_sql_agent(

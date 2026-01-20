@@ -23,7 +23,7 @@ class Config:
     SQLITE_PATH = os.getenv("SQLITE_PATH", "demo.db")
 
     # Optional: comma-separated list of tables to include
-    INCLUDE_TABLES = os.getenv("INCLUDE_TABLES", "").split(",") if os.getenv("INCLUDE_TABLES") else None
+    INCLUDE_TABLES = [t.strip() for t in os.getenv("INCLUDE_TABLES").split(",")] if os.getenv("INCLUDE_TABLES") else None
 
     # Legacy support for USE_SQLITE
     USE_SQLITE = os.getenv("USE_SQLITE", "True").lower() == "true"
@@ -44,4 +44,5 @@ class Config:
     HF_MODEL_ID = os.getenv("HF_MODEL_ID", "Qwen/Qwen2.5-1.5B-Instruct")
     HF_TOKEN = os.getenv("HF_TOKEN")
     HF_MAX_LENGTH = int(os.getenv("HF_MAX_LENGTH", "2048"))
+    HF_GGUF_FILE = os.getenv("HF_GGUF_FILE") # e.g., 'llama-3-8b-instruct.Q4_K_M.gguf'
     HF_TASK = os.getenv("HF_TASK") # e.g., 'text-generation' or 'text2text-generation'

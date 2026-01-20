@@ -9,3 +9,4 @@ pymysql
 langchain-huggingface
 transformers
 torch
+gguf
