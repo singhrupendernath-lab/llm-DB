@@ -41,8 +41,8 @@ class Config:
     LLM_MODEL = os.getenv("LLM_MODEL", "llama3")
     
     # Hugging Face config
-    HF_MODEL_ID = os.getenv("HF_MODEL_ID", "Qwen/Qwen2.5-1.5B-Instruct")
+    HF_MODEL_ID = os.getenv("HF_MODEL_ID", "bartowski/Meta-Llama-3.1-8B-Instruct-GGUF")
     HF_TOKEN = os.getenv("HF_TOKEN")
     HF_MAX_LENGTH = int(os.getenv("HF_MAX_LENGTH", "2048"))
-    HF_GGUF_FILE = os.getenv("HF_GGUF_FILE") # e.g., 'llama-3-8b-instruct.Q4_K_M.gguf'
+    HF_GGUF_FILE = os.getenv("HF_GGUF_FILE", "Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf")
     HF_TASK = os.getenv("HF_TASK") # e.g., 'text-generation' or 'text2text-generation'

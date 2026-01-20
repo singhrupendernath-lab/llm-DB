@@ -8,7 +8,7 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
 - Support for OpenAI-compatible APIs (like Ollama, vLLM).
 - Support for local Hugging Face models (CausalLM and Seq2Seq).
 - Support for **GGUF** models (e.g., Llama 3) via `transformers` and `gguf`.
-- Customizable output formatting (e.g., tables, JSON, summaries).
+- Customizable output formatting (e.g., Markdown tables, lists).
 - Captures and displays executed SQL queries for transparency.
 
 ## Setup
@@ -48,13 +48,15 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
     LLM_MODEL=llama3
     
     # Hugging Face / GGUF config
-    HF_MODEL_ID=microsoft/Phi-3-mini-4k-instruct
+    # Default is a capable small model
+    HF_MODEL_ID=Qwen/Qwen2.5-1.5B-Instruct
     HF_TOKEN=your_huggingface_token
     HF_MAX_LENGTH=2048
 
-    # For GGUF models:
-    # HF_MODEL_ID=TheBloke/Llama-3-8B-Instruct-GGUF
-    # HF_GGUF_FILE=llama-3-8b-instruct.Q4_K_M.gguf
+    # For Llama 3 (GGUF):
+    # Note: Llama 3 is gated. You must accept the license on HF and use a valid HF_TOKEN.
+    # HF_MODEL_ID=bartowski/Meta-Llama-3.1-8B-Instruct-GGUF
+    # HF_GGUF_FILE=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
     ```
 
 3.  **Run the application**:
