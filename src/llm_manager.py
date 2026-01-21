@@ -53,20 +53,23 @@ class LLMManager:
                 model_max_length=Config.HF_MAX_LENGTH
             )
 
+            model_kwargs = {
+                "token": Config.HF_TOKEN,
+                "trust_remote_code": True
+            }
+
             if task == "text2text-generation":
                 model = AutoModelForSeq2SeqLM.from_pretrained(
                     self.model_name,
-                    token=Config.HF_TOKEN,
-                    trust_remote_code=True
+                    **model_kwargs
                 )
             else:
                 model = AutoModelForCausalLM.from_pretrained(
                     self.model_name,
-                    token=Config.HF_TOKEN,
-                    trust_remote_code=True
+                    **model_kwargs
                 )
 
-            # Force disable cache to avoid 'DynamicCache' object has no attribute 'seen_tokens'
+            # Force disable cache
             if hasattr(model, 'config'):
                 model.config.use_cache = False
 
