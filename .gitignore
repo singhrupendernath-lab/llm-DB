@@ -5,4 +5,8 @@ __pycache__/
 .env
 *.db
 .pytest_cache/
+models/
+*.gguf
+*.bin
+*.safetensors
 
