@@ -1,8 +1,8 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from src.db_manager import DBManager
-from llm_manager import LLMManager
-from oracle_bot import OracleBot
+from src.llm_manager import LLMManager
+from src.oracle_bot import OracleBot
 
 class TestOracleBot(unittest.TestCase):
     @patch('src.oracle_bot.create_sql_agent')

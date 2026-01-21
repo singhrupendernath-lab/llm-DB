@@ -42,7 +42,7 @@ class OracleBot:
             f"You have access to a {self.db_manager.db_type} database.\n"
             "Your goal is to provide accurate, decorated, and refined answers.\n\n"
             "CURRENT CONVERSATION LOG:\n"
-            "{chat_history}\n\n"
+            "{{chat_history}}\n\n"
             "OPERATING INSTRUCTIONS:\n"
             "1. ALWAYS use 'sql_db_schema' to understand table structures before querying.\n"
             f"2. Generate correct {self.db_manager.db_type} SQL queries.\n"

@@ -1,9 +1,9 @@
 import unittest
 from unittest.mock import patch, MagicMock
 from src.db_manager import DBManager
-from llm_manager import LLMManager
-from oracle_bot import OracleBot
-from config import Config
+from src.llm_manager import LLMManager
+from src.oracle_bot import OracleBot
+from src.config import Config
 
 class TestManagers(unittest.TestCase):
 
