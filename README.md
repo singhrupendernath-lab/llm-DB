@@ -1,13 +1,20 @@
 # DB-LLM RAG Project
 
-This project allows you to interact with various databases (Oracle, MySQL, SQLite) using natural language via LLMs (OpenAI-compatible, Hugging Face local, or GGUF). It can generate SQL queries, execute them, and format the output according to your instructions.
+This project allows you to interact with various databases (Oracle, MySQL, SQLite) using natural language via LLMs (OpenAI-compatible, Hugging Face local, Hugging Face API, or GGUF). It can generate SQL queries, execute them, and format the output according to your instructions.
 
 ## Features
 - Natural language to SQL conversion.
 - Automated execution on Oracle, MySQL, or SQLite.
 - Support for OpenAI-compatible APIs (like Ollama, vLLM).
 - Support for local Hugging Face models (CausalLM and Seq2Seq).
+<<<<<<< HEAD
 - Support for **GGUF** models via `llama-cpp-python`.
+=======
+- Support for **Hugging Face Inference API** (faster responses, no local loading).
+- Support for **GGUF** models via `llama-cpp-python`.
+- Conversation memory for multi-turn sessions.
+- Automatic spelling and grammar correction for user input.
+>>>>>>> origin/feature/mysql-hf-support-9712919405471788199
 - Customizable output formatting (e.g., Markdown tables, lists).
 - Captures and displays executed SQL queries for transparency.
 
@@ -31,17 +38,24 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
     MYSQL_PORT=3306
     MYSQL_DB=your_database
     
-    # LLM selection: 'openai', 'huggingface', or 'llamacpp'
-    LLM_TYPE=llamacpp
+    # SQLite config
+    SQLITE_PATH=demo.db
 
-    # LlamaCpp / GGUF config
-    # The application will automatically download the model from HF if LOCAL_MODEL_PATH is empty
-    HF_GGUF_REPO=bartowski/Meta-Llama-3.1-8B-Instruct-GGUF
-    HF_GGUF_FILE=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
-    # HF_TOKEN=your_huggingface_token (required for gated models like Llama 3)
+    # LLM selection: 'openai', 'huggingface', 'llamacpp', or 'huggingface_api'
+    LLM_TYPE=huggingface_api
 
-    # Alternatively, specify a local path:
-    # LOCAL_MODEL_PATH=models/llama-3-8b-instruct.gguf
+    # Hugging Face Inference API config (Fastest for open source models)
+    HF_MODEL_ID=meta-llama/Llama-3.1-8B-Instruct
+    HF_TOKEN=your_huggingface_token
+
+    # OpenAI/Generic API config (Ollama, vLLM, etc.)
+    # LLM_API_KEY=your_api_key_if_needed
+    # LLM_BASE_URL=http://localhost:11434/v1
+    # LLM_MODEL=llama3
+
+    # GGUF / LlamaCpp config
+    # HF_GGUF_REPO=bartowski/Meta-Llama-3.1-8B-Instruct-GGUF
+    # HF_GGUF_FILE=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
     ```
 
 3.  **Run the application**:
@@ -62,7 +76,7 @@ python3 src/main.py "How many students are in the database?"
 
 ## Project Structure
 - `src/db_manager.py`: Handles database connections.
-- `src/llm_manager.py`: Manages the connection to the LLM (OpenAI, Transformers, or LlamaCpp).
+- `src/llm_manager.py`: Manages the connection to the LLM (OpenAI, Transformers, API, or LlamaCpp).
 - `src/oracle_bot.py`: Contains the core RAG and SQL generation logic using LangChain SQL Agent.
 - `src/main.py`: CLI entry point.
 - `src/config.py`: Configuration management.

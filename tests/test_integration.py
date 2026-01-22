@@ -65,6 +65,22 @@ class TestManagers(unittest.TestCase):
             truncation=True
         )
 
+    @patch('src.llm_manager.HuggingFaceEndpoint')
+    def test_llm_manager_huggingface_api(self, mock_hf_endpoint):
+        Config.LLM_TYPE = "huggingface_api"
+        Config.HF_MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
+        Config.HF_TOKEN = "test-token"
+
+        llm_manager = LLMManager(llm_type="huggingface_api")
+        llm_manager.get_llm()
+
+        mock_hf_endpoint.assert_called_with(
+            repo_id="meta-llama/Llama-3.1-8B-Instruct",
+            huggingfacehub_api_token="test-token",
+            temperature=0.1,
+            max_new_tokens=1024
+        )
+
     @patch('src.llm_manager.LlamaCpp')
     @patch('src.llm_manager.hf_hub_download')
     def test_llm_manager_llamacpp(self, mock_download, mock_llamacpp):
@@ -91,9 +107,10 @@ class TestManagers(unittest.TestCase):
         mock_llm_manager = MagicMock()
         mock_db_manager.db_type = "sqlite"
 
-        # Setup mock LLM
+        # Setup mock LLM for spelling correction
         mock_llm = MagicMock()
         mock_llm_manager.get_llm.return_value = mock_llm
+        mock_llm.invoke.return_value.content = "How many students are there?"
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
@@ -105,8 +122,8 @@ class TestManagers(unittest.TestCase):
 
         result = bot.ask("how many stduents r there?")
 
-        # Verify agent was called
-        mock_create_sql_agent.return_value.invoke.assert_called()
+        # Verify spelling correction was called
+        mock_llm.invoke.assert_called()
 
         self.assertEqual(result["answer"], "Result")
 

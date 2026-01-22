@@ -17,7 +17,7 @@ class Config:
     MYSQL_PASSWORD = os.getenv("MYSQL_PASSWORD", "")
     MYSQL_HOST = os.getenv("MYSQL_HOST", "localhost")
     MYSQL_PORT = os.getenv("MYSQL_PORT", "3306")
-    MYSQL_DB = os.getenv("MYSQL_DB", "MCA")
+    MYSQL_DB = os.getenv("MYSQL_DB", "demo")
 
     # SQLite connection details
     SQLITE_PATH = os.getenv("SQLITE_PATH", "demo.db")
@@ -32,7 +32,7 @@ class Config:
         # assume they want Oracle (previous behavior)
         DB_TYPE = "oracle"
 
-    # LLM selection: 'openai', 'huggingface', or 'llamacpp'
+    # LLM selection: 'openai', 'huggingface', 'llamacpp', or 'huggingface_api'
     LLM_TYPE = os.getenv("LLM_TYPE", "openai").lower()
 
     # OpenAI/Generic API config

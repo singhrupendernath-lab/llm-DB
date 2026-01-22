@@ -1,9 +1,9 @@
 from langchain_openai import ChatOpenAI
-from langchain_huggingface import HuggingFacePipeline
+from langchain_huggingface import HuggingFacePipeline, HuggingFaceEndpoint
 from langchain_community.llms import LlamaCpp
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, pipeline, AutoConfig
 from huggingface_hub import hf_hub_download
-from config import Config
+from src.config import Config
 import torch
 import os
 
@@ -12,7 +12,7 @@ class LLMManager:
         self.llm_type = llm_type if llm_type else Config.LLM_TYPE
         self.api_key = Config.LLM_API_KEY
         self.base_url = Config.LLM_BASE_URL
-        self.model_name = model_name if model_name else (Config.HF_MODEL_ID if self.llm_type == "huggingface" else Config.LLM_MODEL)
+        self.model_name = model_name if model_name else (Config.HF_MODEL_ID if self.llm_type in ["huggingface", "huggingface_api"] else Config.LLM_MODEL)
 
     def get_llm(self):
         if self.llm_type == "openai":
@@ -23,7 +23,7 @@ class LLMManager:
                 temperature=0
             )
         elif self.llm_type == "huggingface":
-            print(f"Loading Hugging Face model: {self.model_name}...")
+            print(f"Loading Hugging Face model locally: {self.model_name}...")
 
             # Load model config
             try:
@@ -86,6 +86,18 @@ class LLMManager:
 
             return HuggingFacePipeline(pipeline=pipe)
 
+        elif self.llm_type == "huggingface_api":
+            print(f"Using Hugging Face Inference API for model: {self.model_name}...")
+            if not Config.HF_TOKEN:
+                print("Warning: HF_TOKEN not provided. Some models may be inaccessible.")
+
+            return HuggingFaceEndpoint(
+                repo_id=self.model_name,
+                huggingfacehub_api_token=Config.HF_TOKEN,
+                temperature=0.1, # Low temperature for consistent output
+                max_new_tokens=1024
+            )
+
         elif self.llm_type == "llamacpp":
             model_path = Config.LOCAL_MODEL_PATH
 
@@ -98,18 +110,15 @@ class LLMManager:
                 )
                 print(f"Model downloaded to: {model_path}")
 
-            print(f"Loading LlamaCpp model from: {model_path} (Optimized)")
+            print(f"Loading LlamaCpp model from: {model_path}")
 
             # Parameters for LlamaCpp
             return LlamaCpp(
                 model_path=model_path,
                 n_ctx=4096,
-                n_batch=512,
                 n_threads=os.cpu_count() or 4,
                 temperature=0,
-                f16_kv=True,
-                use_mlock=True,
-                verbose=False
+                verbose=True
             )
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
