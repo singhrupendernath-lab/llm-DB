@@ -70,6 +70,7 @@ class TestManagers(unittest.TestCase):
         Config.LLM_TYPE = "huggingface_api"
         Config.HF_MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
         Config.HF_TOKEN = "test-token"
+        Config.HF_TASK = None
 
         llm_manager = LLMManager(llm_type="huggingface_api")
         llm_manager.get_llm()
@@ -78,7 +79,9 @@ class TestManagers(unittest.TestCase):
             repo_id="meta-llama/Llama-3.1-8B-Instruct",
             huggingfacehub_api_token="test-token",
             temperature=0.1,
-            max_new_tokens=1024
+            max_new_tokens=1024,
+            task="text-generation",
+            timeout=300
         )
 
     @patch('src.llm_manager.LlamaCpp')

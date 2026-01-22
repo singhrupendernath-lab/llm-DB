@@ -7,7 +7,7 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
 - Automated execution on Oracle, MySQL, or SQLite.
 - Support for OpenAI-compatible APIs (like Ollama, vLLM).
 - Support for local Hugging Face models (CausalLM and Seq2Seq).
-- Support for **Hugging Face Inference API** (faster responses, no local loading).
+- Support for **Hugging Face Inference API** (Fastest for open source models).
 - Support for **GGUF** models via `llama-cpp-python`.
 - Conversation memory for multi-turn sessions.
 - Automatic spelling and grammar correction for user input.
@@ -40,16 +40,16 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
     # LLM selection: 'openai', 'huggingface', 'llamacpp', or 'huggingface_api'
     LLM_TYPE=huggingface_api
 
-    # Hugging Face Inference API config (Fastest for open source models)
+    # --- Hugging Face Inference API config ---
+    # Model ID (e.g., 'meta-llama/Llama-3.1-8B-Instruct')
     HF_MODEL_ID=meta-llama/Llama-3.1-8B-Instruct
     HF_TOKEN=your_huggingface_token
+    # Tip: Some API providers (like Novita) require a specific task.
+    # If you get a 'task not supported' error, try:
+    HF_TASK=conversational
 
-    # OpenAI/Generic API config (Ollama, vLLM, etc.)
-    # LLM_API_KEY=your_api_key_if_needed
-    # LLM_BASE_URL=http://localhost:11434/v1
-    # LLM_MODEL=llama3
-
-    # GGUF / LlamaCpp config
+    # --- GGUF / LlamaCpp config ---
+    # LLM_TYPE=llamacpp
     # HF_GGUF_REPO=bartowski/Meta-Llama-3.1-8B-Instruct-GGUF
     # HF_GGUF_FILE=Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
     ```
@@ -72,7 +72,7 @@ python3 src/main.py "How many students are in the database?"
 
 ## Project Structure
 - `src/db_manager.py`: Handles database connections.
-- `src/llm_manager.py`: Manages the connection to the LLM (OpenAI, Transformers, API, or LlamaCpp).
+- `src/llm_manager.py`: Manages the connection to the LLM.
 - `src/oracle_bot.py`: Contains the core RAG and SQL generation logic using LangChain SQL Agent.
 - `src/main.py`: CLI entry point.
 - `src/config.py`: Configuration management.
