@@ -5,3 +5,10 @@ langchain-openai
 langchain-experimental
 sqlalchemy
 python-dotenv
+pymysql
+langchain-huggingface
+transformers
+torch
+gguf
+llama-cpp-python
+huggingface_hub

@@ -5,29 +5,40 @@ from langchain_community.utilities import SQLDatabase
 from src.config import Config
 
 class DBManager:
-    def __init__(self, use_sqlite=None, sqlite_path=None):
-        self.use_sqlite = use_sqlite if use_sqlite is not None else Config.USE_SQLITE
-        self.sqlite_path = sqlite_path if sqlite_path is not None else Config.SQLITE_PATH
+    def __init__(self, db_type=None, include_tables=None):
+        self.db_type = db_type if db_type is not None else Config.DB_TYPE
         self.engine = self._create_engine()
-        self.db = SQLDatabase(self.engine)
+        # allow limiting tables to reduce prompt size
+        self.db = SQLDatabase(self.engine, include_tables=include_tables, sample_rows_in_table_info=2)
 
     def _create_engine(self):
-        if self.use_sqlite:
-            return create_engine(f"sqlite:///{self.sqlite_path}")
+        if self.db_type == "sqlite":
+            return create_engine(f"sqlite:///{Config.SQLITE_PATH}")
         
-        # Oracle connection details from Config
-        user = Config.ORACLE_USER
-        password = Config.ORACLE_PASSWORD
-        dsn = Config.ORACLE_DSN
-        
-        if not all([user, password, dsn]):
-            print("Warning: Oracle credentials not fully provided. Falling back to SQLite for demo.")
-            return create_engine(f"sqlite:///{self.sqlite_path}")
+        elif self.db_type == "mysql":
+            user = Config.MYSQL_USER
+            password = Config.MYSQL_PASSWORD
+            host = Config.MYSQL_HOST
+            port = Config.MYSQL_PORT
+            database = Config.MYSQL_DB
 
-        # Construct Oracle SQLAlchemy URL
-        # Format: oracle+oracledb://user:password@dsn
-        connection_url = f"oracle+oracledb://{user}:{password}@{dsn}"
-        return create_engine(connection_url)
+            connection_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+            return create_engine(connection_url)
+
+        elif self.db_type == "oracle":
+            user = Config.ORACLE_USER
+            password = Config.ORACLE_PASSWORD
+            dsn = Config.ORACLE_DSN
+
+            if not all([user, password, dsn]):
+                print("Warning: Oracle credentials not fully provided. Falling back to SQLite.")
+                return create_engine(f"sqlite:///{Config.SQLITE_PATH}")
+
+            connection_url = f"oracle+oracledb://{user}:{password}@{dsn}"
+            return create_engine(connection_url)
+
+        else:
+            raise ValueError(f"Unsupported database type: {self.db_type}")
 
     def get_db(self):
         return self.db
