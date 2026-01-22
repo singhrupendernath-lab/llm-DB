@@ -91,11 +91,9 @@ class TestManagers(unittest.TestCase):
         mock_llm_manager = MagicMock()
         mock_db_manager.db_type = "sqlite"
 
-        # Setup mock LLM for spelling correction
+        # Setup mock LLM
         mock_llm = MagicMock()
         mock_llm_manager.get_llm.return_value = mock_llm
-        # Simulate returning corrected text
-        mock_llm.invoke.return_value.content = "How many students are there?"
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
@@ -107,8 +105,8 @@ class TestManagers(unittest.TestCase):
 
         result = bot.ask("how many stduents r there?")
 
-        # Verify spelling correction was called
-        mock_llm.invoke.assert_called()
+        # Verify agent was called
+        mock_create_sql_agent.return_value.invoke.assert_called()
 
         self.assertEqual(result["answer"], "Result")
 

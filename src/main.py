@@ -37,17 +37,32 @@ def main():
                 
                 format_instruction = input("Format instruction (optional, press Enter to skip): ")
                 
-                result_dict = bot.ask(user_input, format_instruction if format_instruction else None)
+                print("\nBot: ", end="", flush=True)
+                final_answer = ""
+                sql_queries = []
 
-                if result_dict.get("sql_queries"):
-                    print("\n[SQL Queries Executed]")
-                    for sql in result_dict["sql_queries"]:
-                        print(f"  {sql}")
+                # Use streaming for interactive mode
+                for chunk in bot.stream_ask(user_input, format_instruction if format_instruction else None):
+                    if chunk["type"] == "final_answer":
+                        print(chunk["content"], end="", flush=True)
+                        final_answer = chunk["content"]
+                    elif chunk["type"] == "action":
+                        # We print actions in the background (hidden or minimal)
+                        # but if we want it fast, we just stay quiet until final answer
+                        pass
+                    elif chunk["type"] == "error":
+                        print(f"\n[Error] {chunk['content']}")
 
-                print(f"\nBot: {result_dict['answer']}")
+                print() # New line after answer
 
-                if "error" in result_dict:
-                    print(f"(Note: An internal error occurred but fallback was used: {result_dict['error']})")
+                if not final_answer:
+                    # Fallback if streaming didn't produce a final answer
+                    result_dict = bot.ask(user_input, format_instruction if format_instruction else None)
+                    print(result_dict['answer'])
+                    if result_dict.get("sql_queries"):
+                        print("\n[SQL Queries Executed]")
+                        for sql in result_dict["sql_queries"]:
+                            print(f"  {sql}")
 
             except KeyboardInterrupt:
                 break
