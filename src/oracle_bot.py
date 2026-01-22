@@ -44,11 +44,12 @@ class OracleBot:
             "CURRENT CONVERSATION LOG:\n"
             "{{chat_history}}\n\n"
             "OPERATING INSTRUCTIONS:\n"
-            "1. ALWAYS use 'sql_db_schema' to understand table structures before querying.\n"
-            f"2. Generate correct {self.db_manager.db_type} SQL queries.\n"
-            "3. Present data results in professional Markdown tables or lists.\n"
-            "4. For general greetings or role questions, answer directly without tools.\n"
-            "5. If a report is requested, provide a detailed analysis and summary of the data.\n\n"
+            "1. Interpret user input flexibly; ignore minor spelling or grammar errors.\n"
+            "2. ALWAYS use 'sql_db_schema' to understand table structures before querying.\n"
+            f"3. Generate correct {self.db_manager.db_type} SQL queries.\n"
+            "4. Present data results in professional Markdown tables or lists.\n"
+            "5. For general greetings or role questions, answer directly without tools.\n"
+            "6. If a report is requested, provide a detailed analysis and summary of the data.\n\n"
             "FORMAT TO FOLLOW (STRICT):\n"
             "Thought: [Your reasoning for the next step]\n"
             "Action: [Tool Name] (MUST be one of: sql_db_query, sql_db_schema, sql_db_list_tables, sql_db_query_checker)\n"
@@ -73,67 +74,18 @@ class OracleBot:
             input_variables=["input", "agent_scratchpad", "chat_history"]
         )
 
-    def _correct_spelling(self, text: str) -> str:
-        """Corrects spelling and grammar using the LLM."""
-        if not text or len(text) < 3:
-            return text
-
-        # Strict prompt for spelling correction
-        prompt = (
-            "System: You are a spelling and grammar correction assistant. "
-            "Your task is to take the user's input and provide a corrected version of it. "
-            "Do not add any explanations, do not answer questions, and do not provide any meta-commentary. "
-            "Only return the corrected text.\n\n"
-            f"User Input: {text}\n"
-            "Corrected Text:"
-        )
-
-        try:
-            if hasattr(self.llm, 'invoke'):
-                # Try to use a small max_tokens if supported by the LLM object to prevent runaway generation
-                # LlamaCpp and ChatOpenAI usually support some way to pass params,
-                # but direct invoke might just take the prompt.
-                response = self.llm.invoke(prompt)
-                corrected = response.content if hasattr(response, 'content') else str(response)
-            else:
-                corrected = self.llm(prompt)
-
-            # Post-processing to remove common unwanted artifacts
-            corrected = corrected.strip()
-
-            # Remove repeated "Corrected Text:" if LLM included it
-            prefixes_to_remove = ["Corrected Text:", "Corrected:", "Output:"]
-            for p in prefixes_to_remove:
-                if corrected.startswith(p):
-                    corrected = corrected[len(p):].strip()
-
-            # Strip quotes
-            corrected = corrected.strip().strip('"').strip("'")
-
-            # If the LLM returned multiple lines (meta-commentary often follows on new lines),
-            # take only the first non-empty line
-            lines = [l.strip() for l in corrected.split('\n') if l.strip()]
-            if lines:
-                corrected = lines[0]
-
-            return corrected
-        except Exception as e:
-            print(f"Spelling correction failed: {e}")
-            return text
-
     def ask(self, question: str, format_instruction: str = None):
-        # Step 1: Correct spelling
-        corrected_question = self._correct_spelling(question)
-
-        full_query = corrected_question
+        full_query = question
         if format_instruction:
             full_query += f"\n\nPlease format the output as follows: {format_instruction}"
         
         try:
+            # We use invoke here for synchronous results, but main.py can use a generator if needed
             result = self.agent_executor.invoke({"input": full_query})
 
             sql_queries = []
             for step in result.get("intermediate_steps", []):
+                # LangChain intermediate steps are (AgentAction, Observation)
                 if hasattr(step[0], 'tool') and step[0].tool == "sql_db_query":
                     sql_queries.append(step[0].tool_input)
 
@@ -160,6 +112,26 @@ class OracleBot:
                     "answer": f"Error occurred: {str(e)} and fallback also failed: {str(e2)}",
                     "sql_queries": []
                 }
+
+    def stream_ask(self, question: str, format_instruction: str = None):
+        """Streams the agent's progress and final answer."""
+        full_query = question
+        if format_instruction:
+            full_query += f"\n\nPlease format the output as follows: {format_instruction}"
+
+        try:
+            for chunk in self.agent_executor.stream({"input": full_query}):
+                # Handle different types of chunks
+                if "actions" in chunk:
+                    for action in chunk["actions"]:
+                        yield {"type": "action", "content": action.log}
+                elif "steps" in chunk:
+                    for step in chunk["steps"]:
+                        yield {"type": "observation", "content": f"Observation: {step.observation}"}
+                elif "output" in chunk:
+                    yield {"type": "final_answer", "content": chunk["output"]}
+        except Exception as e:
+            yield {"type": "error", "content": str(e)}
 
     def generate_report(self, report_description: str, format_type: str = "table"):
         prompt = f"Generate a detailed report for: {report_description}. Output format: {format_type}."

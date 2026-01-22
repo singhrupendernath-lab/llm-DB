@@ -98,15 +98,18 @@ class LLMManager:
                 )
                 print(f"Model downloaded to: {model_path}")
 
-            print(f"Loading LlamaCpp model from: {model_path}")
+            print(f"Loading LlamaCpp model from: {model_path} (Optimized)")
 
             # Parameters for LlamaCpp
             return LlamaCpp(
                 model_path=model_path,
                 n_ctx=4096,
+                n_batch=512,
                 n_threads=os.cpu_count() or 4,
                 temperature=0,
-                verbose=True
+                f16_kv=True,
+                use_mlock=True,
+                verbose=False
             )
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
