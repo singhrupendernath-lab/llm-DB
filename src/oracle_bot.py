@@ -31,58 +31,76 @@ class OracleBot:
         self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
         # Determine agent type
-        if self.llm_manager.llm_type == "openai":
+        # tool-calling is preferred for OpenAI and ChatHuggingFace (Llama 3.1)
+        if self.llm_manager.llm_type in ["openai", "huggingface_api"]:
             agent_type = "tool-calling"
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
+        # Get usable table names to include in prompt for faster reasoning
+        try:
+            table_names_list = self.db.get_usable_table_names()
+            table_names_str = ", ".join(table_names_list)
+        except Exception:
+            table_names_str = "all tables"
+
         # Enhanced prompt with memory and dialect placeholder
-        # Note: We do NOT use an f-string for the whole block.
-        # This allows create_sql_agent to call .format(dialect=...) correctly.
-        # We use {{chat_history}} to escape it during the first format() call.
+        # We use {{chat_history}} so it survives the first .format() and remains a variable for the prompt template.
         prefix = (
-            "You are a professional Data Analyst assistant.\n"
-            "You are connected to a {dialect} database.\n"
-            "Your job is to answer user questions by generating accurate SQL queries "
-            "and presenting results professionally.\n\n"
-
-            "CURRENT CONVERSATION HISTORY:\n"
+            "You are an expert Data Analyst and SQL Engineer. You are helpful and concise.\n"
+            "You have access to a {dialect} database.\n"
+            f"Available tables are: {table_names_str}\n\n"
+            "CURRENT CONVERSATION LOG:\n"
             "{{chat_history}}\n\n"
-
-            "IMPORTANT OPERATING RULES:\n"
-            "1. At the beginning of the conversation, ALWAYS inspect the database schema first using:\n"
-            "   - `sql_db_list_tables`\n"
-            "   - `sql_db_schema`\n\n"
-
-            "2. Once you fetch the available table names and column structures, "
-            "REMEMBER them for the rest of the conversation.\n"
-            "   - Do NOT call schema tools again unless the user asks about a new table.\n"
-            "   - Use the remembered schema information to generate future queries faster.\n\n"
-
-            "3. Generate correct, efficient {dialect} SQL queries based on the known schema.\n"
-
-            "4. Always execute queries using `sql_db_query` before answering.\n"
-
-            "5. Present query results in clean Markdown tables or clear bullet summaries.\n"
-
-            "6. If the user asks a general greeting or non-database question, respond directly.\n"
-
-            "7. Never guess table or column names — always rely on schema fetched earlier.\n\n"
-
-            "Database Dialect: {dialect}\n"
-            "Begin!\n"
+            "INSTRUCTIONS:\n"
+            "1. If the question is a greeting or general, answer it directly.\n"
+            "2. If the question requires database access, use 'sql_db_schema' to check relevant tables.\n"
+            "3. ALWAYS verify the schema before writing a query.\n"
+            "4. Use ONLY the tools provided. DO NOT hallucinate tools.\n"
+            "5. After 'Action Input:', you MUST STOP. DO NOT generate 'Observation:' yourself.\n"
+            "6. Provide the Final Answer in a friendly, decorated Markdown format.\n\n"
+            "Top K results: {top_k}\n"
         )
 
+        if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
+            prefix += (
+                "FORMAT TO FOLLOW:\n"
+                "Thought: I need to ...\n"
+                "Action: the action to take\n"
+                "Action Input: the input to the action\n"
+                "Observation: the result of the action (provided by system)\n"
+                "... (repeat Thought/Action/Action Input/Observation if needed)\n"
+                "Thought: I now know the final answer\n"
+                "Final Answer: [Your decorated response]\n\n"
+            )
 
+        # Custom suffix to avoid the hardcoded "Thought: I should look at the tables"
+        # which often causes looping in modern models like Llama 3.
+        # We only apply this to ReAct agents.
+        if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
+            suffix = (
+                "Begin!\n\n"
+                "Question: {input}\n"
+                "{agent_scratchpad}"
+            )
+        else:
+            suffix = None
+
+        # Increase iterations as requested by user
         self.agent_executor = create_sql_agent(
             llm=self.llm,
             db=self.db,
             verbose=True,
             agent_type=agent_type,
-            handle_parsing_errors=True,
             prefix=prefix,
+            suffix=suffix,
             return_intermediate_steps=True,
-            agent_executor_kwargs={"memory": self.memory}
+            max_iterations=30,
+            early_stopping_method="generate",
+            agent_executor_kwargs={
+                "memory": self.memory,
+                "handle_parsing_errors": "Check your format. Remember to use Thought, Action, Action Input, and let the system provide Observation. Do not hallucinate tools."
+            }
         )
 
     def ask(self, question: str, format_instruction: str = None):
