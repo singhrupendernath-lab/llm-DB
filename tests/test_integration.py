@@ -75,12 +75,13 @@ class TestManagers(unittest.TestCase):
         llm_manager = LLMManager(llm_type="huggingface_api")
         llm_manager.get_llm()
 
+        # Should use 'conversational' task for 'Instruct' models
         mock_hf_endpoint.assert_called_with(
             repo_id="meta-llama/Llama-3.1-8B-Instruct",
             huggingfacehub_api_token="test-token",
             temperature=0.1,
             max_new_tokens=1024,
-            task="text-generation",
+            task="conversational",
             timeout=300
         )
 
