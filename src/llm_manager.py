@@ -86,12 +86,15 @@ class LLMManager:
                 print("Warning: HF_TOKEN not provided. API calls will likely fail.")
 
             # Use conversational task by default for Chat/Instruct models if not specified
+            # This fixes the error where providers like Novita require 'conversational'
             task = Config.HF_TASK
             if not task:
                 if "instruct" in self.model_name.lower() or "chat" in self.model_name.lower():
-                    task = "text-generation" # Endpoint usually prefers this or conversational
+                    task = "conversational"
                 else:
                     task = "text-generation"
+
+            print(f"Using task: {task}")
 
             return HuggingFaceEndpoint(
                 repo_id=self.model_name,
