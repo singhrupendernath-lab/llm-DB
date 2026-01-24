@@ -131,5 +131,36 @@ class TestManagers(unittest.TestCase):
         result = bot.ask("how many students?")
         self.assertEqual(result["answer"], "Result")
 
+    @patch('src.oracle_bot.ReportsManager')
+    @patch('src.oracle_bot.create_sql_agent')
+    def test_predefined_report(self, mock_create_agent, mock_reports_manager):
+        mock_db_manager = MagicMock()
+        mock_llm_manager = MagicMock()
+        mock_llm = MagicMock()
+        mock_llm_manager.get_llm.return_value = mock_llm
+
+        # Setup report mock
+        mock_rm_instance = mock_reports_manager.return_value
+        mock_rm_instance.find_report_id.return_value = "AT1201"
+        mock_rm_instance.get_report.return_value = {
+            "name": "Test Report",
+            "query": "SELECT * FROM test"
+        }
+
+        bot = OracleBot(mock_db_manager, mock_llm_manager)
+
+        # Mock DB response
+        mock_db_manager.get_db.return_value.run.return_value = "[('data',)]"
+
+        # Mock LLM response for formatting
+        mock_llm.invoke.return_value.content = "Formatted Data"
+
+        result = bot.ask("I want AT1201 reports")
+
+        self.assertEqual(result["answer"], "Formatted Data")
+        self.assertEqual(result["sql_queries"], ["SELECT * FROM test"])
+        self.assertEqual(result["report_id"], "AT1201")
+        mock_rm_instance.log_execution.assert_called_once()
+
 if __name__ == '__main__':
     unittest.main()

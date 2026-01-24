@@ -19,6 +19,7 @@ except ImportError:
 
 from .db_manager import DBManager
 from .llm_manager import LLMManager
+from .reports_manager import ReportsManager
 
 class OracleBot:
     def __init__(self, db_manager: DBManager, llm_manager: LLMManager):
@@ -26,7 +27,8 @@ class OracleBot:
         self.llm_manager = llm_manager
         self.llm = self.llm_manager.get_llm()
         self.db = self.db_manager.get_db()
-        
+        self.reports_manager = ReportsManager()
+
         # Initialize Memory
         self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
@@ -108,6 +110,42 @@ class OracleBot:
         )
 
     def ask(self, question: str, format_instruction: str = None):
+        # Check for predefined reports first
+        report_id = self.reports_manager.find_report_id(question)
+        if report_id:
+            report = self.reports_manager.get_report(report_id)
+            query = report["query"]
+            print(f"Detected predefined report {report_id}: {report['name']}")
+
+            try:
+                # Execute specific query directly
+                data = self.db.run(query)
+                self.reports_manager.log_execution(report_id, query)
+
+                # Use LLM to format the raw data if needed
+                format_prompt = (
+                    f"The user requested report {report_id} ({report['name']}).\n"
+                    f"The following data was retrieved from the database:\n{data}\n\n"
+                    "Please present this data in a professional Markdown format."
+                )
+                if format_instruction:
+                    format_prompt += f" Follow these instructions: {format_instruction}"
+
+                if hasattr(self.llm, 'invoke'):
+                    response = self.llm.invoke(format_prompt)
+                    answer = response.content if hasattr(response, 'content') else str(response)
+                else:
+                    answer = self.llm(format_prompt)
+
+                return {
+                    "answer": answer,
+                    "sql_queries": [query],
+                    "report_id": report_id
+                }
+            except Exception as e:
+                print(f"Error executing predefined report: {e}")
+                # Fall back to agent if predefined query fails
+
         full_query = question
         if format_instruction:
             full_query += f"\n\nPlease format the output as follows: {format_instruction}"
