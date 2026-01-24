@@ -1,5 +1,5 @@
 from langchain_openai import ChatOpenAI
-from langchain_huggingface import HuggingFacePipeline, HuggingFaceEndpoint
+from langchain_huggingface import HuggingFacePipeline, HuggingFaceEndpoint, ChatHuggingFace
 from langchain_community.llms import LlamaCpp
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, pipeline, AutoConfig
 from huggingface_hub import hf_hub_download
@@ -96,7 +96,7 @@ class LLMManager:
 
             print(f"Using task: {task}")
 
-            return HuggingFaceEndpoint(
+            llm = HuggingFaceEndpoint(
                 repo_id=self.model_name,
                 huggingfacehub_api_token=Config.HF_TOKEN,
                 temperature=0.1,
@@ -104,6 +104,11 @@ class LLMManager:
                 task=task,
                 timeout=300
             )
+
+            # Use ChatHuggingFace for conversational models
+            if task == "conversational":
+                return ChatHuggingFace(llm=llm)
+            return llm
 
         elif self.llm_type == "llamacpp":
             model_path = Config.LOCAL_MODEL_PATH
