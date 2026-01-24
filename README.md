@@ -7,14 +7,10 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
 - Automated execution on Oracle, MySQL, or SQLite.
 - Support for OpenAI-compatible APIs (like Ollama, vLLM).
 - Support for local Hugging Face models (CausalLM and Seq2Seq).
-<<<<<<< HEAD
-- Support for **GGUF** models via `llama-cpp-python`.
-=======
 - Support for **Hugging Face Inference API** (faster responses, no local loading).
 - Support for **GGUF** models via `llama-cpp-python`.
 - Conversation memory for multi-turn sessions.
 - Automatic spelling and grammar correction for user input.
->>>>>>> origin/feature/mysql-hf-support-9712919405471788199
 - Customizable output formatting (e.g., Markdown tables, lists).
 - Captures and displays executed SQL queries for transparency.
 

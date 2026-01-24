@@ -3,7 +3,7 @@ from langchain_huggingface import HuggingFacePipeline, HuggingFaceEndpoint
 from langchain_community.llms import LlamaCpp
 from transformers import AutoModelForCausalLM, AutoModelForSeq2SeqLM, AutoTokenizer, pipeline, AutoConfig
 from huggingface_hub import hf_hub_download
-from src.config import Config
+from config import Config
 import torch
 import os
 
