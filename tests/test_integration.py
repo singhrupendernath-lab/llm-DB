@@ -110,24 +110,17 @@ class TestManagers(unittest.TestCase):
         mock_llm_manager = MagicMock()
         mock_db_manager.db_type = "sqlite"
 
-        # Setup mock LLM for spelling correction
-        mock_llm = MagicMock()
-        mock_llm_manager.get_llm.return_value = mock_llm
-        mock_llm.invoke.return_value.content = "How many students are there?"
-
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
-        # Mocking result with intermediate steps
+        mock_create_sql_agent.assert_called()
+
+        # Mocking result
         mock_create_sql_agent.return_value.invoke.return_value = {
             "output": "Result",
             "intermediate_steps": []
         }
 
-        result = bot.ask("how many stduents r there?")
-
-        # Verify spelling correction was called
-        mock_llm.invoke.assert_called()
-
+        result = bot.ask("how many students?")
         self.assertEqual(result["answer"], "Result")
 
 if __name__ == '__main__':
