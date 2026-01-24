@@ -41,27 +41,38 @@ class OracleBot:
         # This allows create_sql_agent to call .format(dialect=...) correctly.
         # We use {{chat_history}} to escape it during the first format() call.
         prefix = (
-            "You are a professional Data Analyst assistant with memory of the current conversation.\n"
-            "You have access to a {dialect} database.\n"
-            "Your goal is to provide accurate, decorated, and refined answers.\n\n"
-            "CURRENT CONVERSATION LOG:\n"
+            "You are a professional Data Analyst assistant.\n"
+            "You are connected to a {dialect} database.\n"
+            "Your job is to answer user questions by generating accurate SQL queries "
+            "and presenting results professionally.\n\n"
+
+            "CURRENT CONVERSATION HISTORY:\n"
             "{{chat_history}}\n\n"
-            "OPERATING INSTRUCTIONS:\n"
-            "1. ALWAYS use 'sql_db_schema' to understand table structures before querying.\n"
-            "2. Generate correct {dialect} SQL queries.\n"
-            "3. Present data results in professional Markdown tables or lists.\n"
-            "4. For general greetings or role questions, answer directly without tools.\n\n"
-            "FORMAT TO FOLLOW:\n"
-            "Thought: [Brief reasoning]\n"
-            "Action: [Tool Name]\n"
-            "Action Input: [Input for the tool]\n"
-            "Observation: [Tool result]\n"
-            "... (repeat as necessary)\n"
-            "Thought: I have the information needed.\n"
-            "Final Answer: [Your refined response here]\n\n"
-            "Database Platform: {dialect}\n"
-            "Begin!"
+
+            "IMPORTANT OPERATING RULES:\n"
+            "1. At the beginning of the conversation, ALWAYS inspect the database schema first using:\n"
+            "   - `sql_db_list_tables`\n"
+            "   - `sql_db_schema`\n\n"
+
+            "2. Once you fetch the available table names and column structures, "
+            "REMEMBER them for the rest of the conversation.\n"
+            "   - Do NOT call schema tools again unless the user asks about a new table.\n"
+            "   - Use the remembered schema information to generate future queries faster.\n\n"
+
+            "3. Generate correct, efficient {dialect} SQL queries based on the known schema.\n"
+
+            "4. Always execute queries using `sql_db_query` before answering.\n"
+
+            "5. Present query results in clean Markdown tables or clear bullet summaries.\n"
+
+            "6. If the user asks a general greeting or non-database question, respond directly.\n"
+
+            "7. Never guess table or column names — always rely on schema fetched earlier.\n\n"
+
+            "Database Dialect: {dialect}\n"
+            "Begin!\n"
         )
+
 
         self.agent_executor = create_sql_agent(
             llm=self.llm,
