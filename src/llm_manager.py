@@ -127,11 +127,12 @@ class LLMManager:
 
             return LlamaCpp(
                 model_path=model_path,
-                n_ctx=4096,
+                n_ctx=1028,
+                n_data=16,
                 n_threads=os.cpu_count() or 4,
                 temperature=0,
-                verbose=True,
-                stop=["Observation:", "\nObservation:"]
+                verbose=True
+               # stop=["Observation:", "\nObservation:"]
             )
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")
