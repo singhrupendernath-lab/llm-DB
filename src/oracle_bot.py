@@ -36,17 +36,21 @@ class OracleBot:
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
-        # Enhanced prompt with memory and strict formatting
-        # We use {{chat_history}} because create_sql_agent calls .format() internally
+        # Enhanced prompt with memory
+        # We use a regular string (not f-string) for the prefix parts that LangChain formats.
+        # However, to avoid 'missing variable dialect' error, we provide it ourselves if needed
+        # or we just hardcode it to be safe since we know it.
+        db_type = self.db_manager.db_type
+
         prefix = (
-            f"You are a professional Data Analyst assistant with memory of the current conversation.\n"
-            f"You have access to a {{dialect}} database (currently {self.db_manager.db_type}).\n"
+            "You are a professional Data Analyst assistant with memory of the current conversation.\n"
+            f"You have access to a {db_type} database.\n"
             "Your goal is to provide accurate, decorated, and refined answers.\n\n"
             "CURRENT CONVERSATION LOG:\n"
             "{{chat_history}}\n\n"
             "OPERATING INSTRUCTIONS:\n"
             "1. ALWAYS use 'sql_db_schema' to understand table structures before querying.\n"
-            "2. Generate correct {{dialect}} SQL queries.\n"
+            f"2. Generate correct {db_type} SQL queries.\n"
             "3. Present data results in professional Markdown tables or lists.\n"
             "4. For general greetings or role questions, answer directly without tools.\n\n"
             "FORMAT TO FOLLOW:\n"
@@ -57,6 +61,7 @@ class OracleBot:
             "... (repeat as necessary)\n"
             "Thought: I have the information needed.\n"
             "Final Answer: [Your refined response here]\n\n"
+            f"Database Platform: {db_type}\n"
             "Begin!"
         )
 
@@ -68,43 +73,12 @@ class OracleBot:
             handle_parsing_errors=True,
             prefix=prefix,
             return_intermediate_steps=True,
-            agent_executor_kwargs={"memory": self.memory},
-            input_variables=["input", "agent_scratchpad", "chat_history"]
+            agent_executor_kwargs={"memory": self.memory}
         )
-
-    def _correct_spelling(self, text: str) -> str:
-        """Corrects spelling and grammar using the LLM."""
-        if not text or len(text) < 3:
-            return text
-
-        prompt = (
-            "You are a spelling and grammar correction tool. "
-            "Correct the following text while preserving its exact meaning and intent. "
-            "Do not answer the question, just correct the text. "
-            "Return ONLY the corrected text.\n\n"
-            f"Text: {text}\n"
-            "Corrected:"
-        )
-
-        try:
-            if hasattr(self.llm, 'invoke'):
-                response = self.llm.invoke(prompt)
-                corrected = response.content if hasattr(response, 'content') else str(response)
-            else:
-                corrected = self.llm(prompt)
-
-            corrected = corrected.strip().strip('"').strip("'")
-            print(f"[Spelling Correction] Original: '{text}' -> Corrected: '{corrected}'")
-            return corrected
-        except Exception as e:
-            print(f"Spelling correction failed: {e}")
-            return text
 
     def ask(self, question: str, format_instruction: str = None):
-        # Step 1: Correct spelling
-        corrected_question = self._correct_spelling(question)
-
-        full_query = corrected_question
+        # Spelling check removed as per user request
+        full_query = question
         if format_instruction:
             full_query += f"\n\nPlease format the output as follows: {format_instruction}"
         

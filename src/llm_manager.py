@@ -25,14 +25,12 @@ class LLMManager:
         elif self.llm_type == "huggingface":
             print(f"Loading Hugging Face model locally: {self.model_name}...")
 
-            # Load model config
             try:
                 hf_config = AutoConfig.from_pretrained(self.model_name, token=Config.HF_TOKEN, trust_remote_code=True)
                 model_type = hf_config.model_type
             except Exception:
                 model_type = "unknown"
 
-            # Determine task
             task = Config.HF_TASK
             if not task:
                 if model_type in ["t5", "flan-t5", "bart", "marian"]:
@@ -41,11 +39,8 @@ class LLMManager:
                     task = "text-generation"
 
             print(f"Detected task: {task}")
-
-            # Device selection
             device = 0 if torch.cuda.is_available() else -1
 
-            # Explicitly load tokenizer and model
             tokenizer = AutoTokenizer.from_pretrained(
                 self.model_name,
                 token=Config.HF_TOKEN,
@@ -69,11 +64,9 @@ class LLMManager:
                     **model_kwargs
                 )
 
-            # Force disable cache
             if hasattr(model, 'config'):
                 model.config.use_cache = False
 
-            # Create pipeline
             pipe = pipeline(
                 task,
                 model=model,
@@ -88,14 +81,25 @@ class LLMManager:
 
         elif self.llm_type == "huggingface_api":
             print(f"Using Hugging Face Inference API for model: {self.model_name}...")
+
             if not Config.HF_TOKEN:
-                print("Warning: HF_TOKEN not provided. Some models may be inaccessible.")
+                print("Warning: HF_TOKEN not provided. API calls will likely fail.")
+
+            # Use conversational task by default for Chat/Instruct models if not specified
+            task = Config.HF_TASK
+            if not task:
+                if "instruct" in self.model_name.lower() or "chat" in self.model_name.lower():
+                    task = "text-generation" # Endpoint usually prefers this or conversational
+                else:
+                    task = "text-generation"
 
             return HuggingFaceEndpoint(
                 repo_id=self.model_name,
                 huggingfacehub_api_token=Config.HF_TOKEN,
-                temperature=0.1, # Low temperature for consistent output
-                max_new_tokens=1024
+                temperature=0.1,
+                max_new_tokens=1024,
+                task=task,
+                timeout=300
             )
 
         elif self.llm_type == "llamacpp":
@@ -112,7 +116,6 @@ class LLMManager:
 
             print(f"Loading LlamaCpp model from: {model_path}")
 
-            # Parameters for LlamaCpp
             return LlamaCpp(
                 model_path=model_path,
                 n_ctx=4096,
