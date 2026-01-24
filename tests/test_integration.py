@@ -66,16 +66,21 @@ class TestManagers(unittest.TestCase):
         )
 
     @patch('src.llm_manager.HuggingFaceEndpoint')
-    def test_llm_manager_huggingface_api(self, mock_hf_endpoint):
+    @patch('src.llm_manager.ChatHuggingFace')
+    def test_llm_manager_huggingface_api(self, mock_chat_hf, mock_hf_endpoint):
         Config.LLM_TYPE = "huggingface_api"
         Config.HF_MODEL_ID = "meta-llama/Llama-3.1-8B-Instruct"
         Config.HF_TOKEN = "test-token"
         Config.HF_TASK = None
 
+        mock_endpoint_instance = MagicMock()
+        # We need the mock to look like a HuggingFaceEndpoint to pass validation if it were real,
+        # but since we mock ChatHuggingFace too, we just need to ensure it's called.
+        mock_hf_endpoint.return_value = mock_endpoint_instance
+
         llm_manager = LLMManager(llm_type="huggingface_api")
         llm_manager.get_llm()
 
-        # Should use 'conversational' task for 'Instruct' models
         mock_hf_endpoint.assert_called_with(
             repo_id="meta-llama/Llama-3.1-8B-Instruct",
             huggingfacehub_api_token="test-token",
@@ -84,6 +89,7 @@ class TestManagers(unittest.TestCase):
             task="conversational",
             timeout=300
         )
+        mock_chat_hf.assert_called_with(llm=mock_endpoint_instance)
 
     @patch('src.llm_manager.LlamaCpp')
     @patch('src.llm_manager.hf_hub_download')
