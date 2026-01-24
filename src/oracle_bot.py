@@ -31,8 +31,11 @@ class OracleBot:
         self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
 
         # Determine agent type
-        # tool-calling is preferred for OpenAI and ChatHuggingFace (Llama 3.1)
-        if self.llm_manager.llm_type in ["openai", "huggingface_api"]:
+        # tool-calling is preferred for OpenAI.
+        # For Hugging Face models, tool-calling often fails with "Bad request" (400)
+        # on certain Inference API providers (like Novita) because of the tools schema.
+        # ReAct (ZERO_SHOT_REACT_DESCRIPTION) is more compatible with wide range of HF models.
+        if self.llm_manager.llm_type == "openai":
             agent_type = "tool-calling"
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
@@ -65,13 +68,14 @@ class OracleBot:
         if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
             prefix += (
                 "FORMAT TO FOLLOW:\n"
-                "Thought: I need to ...\n"
-                "Action: the action to take\n"
-                "Action Input: the input to the action\n"
-                "Observation: the result of the action (provided by system)\n"
-                "... (repeat Thought/Action/Action Input/Observation if needed)\n"
-                "Thought: I now know the final answer\n"
+                "Thought: [Your reasoning]\n"
+                "Action: [Tool name]\n"
+                "Action Input: [Tool input]\n"
+                "Observation: [Tool result will be provided by the system. DO NOT generate this yourself!]\n"
+                "... (repeat if needed)\n"
+                "Thought: I have the final answer\n"
                 "Final Answer: [Your decorated response]\n\n"
+                "REMEMBER: Stop generating after 'Action Input:'. The system will provide the Observation.\n"
             )
 
         # Custom suffix to avoid the hardcoded "Thought: I should look at the tables"

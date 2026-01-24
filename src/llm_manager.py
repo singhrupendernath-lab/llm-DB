@@ -102,7 +102,8 @@ class LLMManager:
                 temperature=0.1,
                 max_new_tokens=1024,
                 task=task,
-                timeout=300
+                timeout=300,
+                stop_sequences=["Observation:", "\nObservation:"]
             )
 
             # Use ChatHuggingFace for conversational models
@@ -129,7 +130,8 @@ class LLMManager:
                 n_ctx=4096,
                 n_threads=os.cpu_count() or 4,
                 temperature=0,
-                verbose=True
+                verbose=True,
+                stop=["Observation:", "\nObservation:"]
             )
         else:
             raise ValueError(f"Unsupported LLM type: {self.llm_type}")

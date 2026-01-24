@@ -87,7 +87,8 @@ class TestManagers(unittest.TestCase):
             temperature=0.1,
             max_new_tokens=1024,
             task="conversational",
-            timeout=300
+            timeout=300,
+            stop_sequences=["Observation:", "\nObservation:"]
         )
         mock_chat_hf.assert_called_with(llm=mock_endpoint_instance)
 
