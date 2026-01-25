@@ -147,6 +147,7 @@ class TestManagers(unittest.TestCase):
             "query": "SELECT * FROM test"
         }
         mock_rm_instance.format_query.return_value = "SELECT * FROM test"
+        mock_rm_instance.get_missing_variables.return_value = []
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
@@ -177,6 +178,7 @@ class TestManagers(unittest.TestCase):
             "query": "SELECT * FROM test"
         }
         mock_rm_instance.format_query.return_value = "SELECT * FROM test"
+        mock_rm_instance.get_missing_variables.return_value = []
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
@@ -187,6 +189,28 @@ class TestManagers(unittest.TestCase):
 
         self.assertEqual(result["answer"], "No records found for the requested criteria.")
         self.assertEqual(result["sql_queries"], ["SELECT * FROM test"])
+
+    @patch('src.oracle_bot.ReportsManager')
+    @patch('src.oracle_bot.create_sql_agent')
+    def test_predefined_report_missing_vars(self, mock_create_agent, mock_reports_manager):
+        mock_db_manager = MagicMock()
+        mock_llm_manager = MagicMock()
+
+        # Setup report mock
+        mock_rm_instance = mock_reports_manager.return_value
+        mock_rm_instance.find_report_id.return_value = "AT1201"
+        mock_rm_instance.get_report.return_value = {
+            "name": "Test Report",
+            "query": "SELECT * FROM t WHERE d=:date"
+        }
+        mock_rm_instance.get_missing_variables.return_value = ["date"]
+
+        bot = OracleBot(mock_db_manager, mock_llm_manager)
+
+        result = bot.ask("give me AT1201")
+
+        self.assertIn("requires additional information: date", result["answer"])
+        self.assertEqual(result["sql_queries"], [])
 
     def test_reports_manager_parameter_extraction(self):
         from src.reports_manager import ReportsManager
@@ -221,6 +245,20 @@ class TestManagers(unittest.TestCase):
 
         query = rm.format_query("AT1202", "give me AT1202 for 2024-09-01")
         self.assertEqual(query, "SELECT * FROM t WHERE d = 2024-09-01")
+
+    def test_reports_manager_missing_vars(self):
+        from src.reports_manager import ReportsManager
+        rm = ReportsManager()
+
+        rm.reports = {
+            "AT1201": {"query": "SELECT * FROM t WHERE d='{date}'"}
+        }
+
+        missing = rm.get_missing_variables("AT1201", "give me AT1201")
+        self.assertEqual(missing, ["date"])
+
+        missing_none = rm.get_missing_variables("AT1201", "AT1201 for 2024-01-01")
+        self.assertEqual(missing_none, [])
 
 if __name__ == '__main__':
     unittest.main()

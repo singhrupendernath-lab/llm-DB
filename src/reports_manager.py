@@ -78,6 +78,24 @@ class ReportsManager:
             print(f"Error formatting query: {e}")
             return query
 
+    def get_missing_variables(self, report_id, user_text):
+        report = self.get_report(report_id)
+        if not report:
+            return []
+
+        query = report["query"]
+        # Convert :var to {var}
+        query = re.sub(r":(\w+)", r"{\1}", query)
+
+        # Find all required variables in {var} format
+        required_vars = list(set(re.findall(r"\{(\w+)\}", query)))
+
+        clean_text = re.sub(rf"\b{report_id}\b", "", user_text, flags=re.IGNORECASE)
+        params = self.extract_parameters(clean_text)
+
+        missing = [v for v in required_vars if v not in params]
+        return missing
+
     def get_report(self, report_id):
         return self.reports.get(report_id)
 
