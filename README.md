@@ -10,7 +10,7 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
 - Support for **Hugging Face Inference API** (Fastest for open source models).
 - Support for **GGUF** models via `llama-cpp-python`.
 - Conversation memory for multi-turn sessions.
-- Automatic spelling and grammar correction for user input.
+- **Predefined Reports**: Execute specific SQL queries by providing a report ID (e.g., "AT1201").
 - Customizable output formatting (e.g., Markdown tables, lists).
 - Captures and displays executed SQL queries for transparency.
 
@@ -59,6 +59,20 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
     export PYTHONPATH=$PYTHONPATH:.
     python3 src/main.py
     ```
+
+## Predefined Reports
+You can define specific SQL queries for report IDs in the `reports.json` file. When a user mentions a report ID (e.g., "I want AT1201 reports"), the bot will skip the reasoning process and execute the mapped query directly.
+
+Example `reports.json`:
+```json
+{
+    "AT1201": {
+        "name": "Student Attendance Report",
+        "query": "SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = '2024-09-01';"
+    }
+}
+```
+All executions of predefined reports are logged to `report_execution.log`.
 
 ## Usage
 You can run it in interactive mode:
