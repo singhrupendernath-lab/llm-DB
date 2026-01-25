@@ -24,6 +24,54 @@ class ReportsManager:
                 return report_id
         return None
 
+    def extract_parameters(self, text):
+        params = {}
+        # Extract dates (YYYY-MM-DD)
+        dates = re.findall(r"\d{4}-\d{2}-\d{2}", text)
+        if dates:
+            params["date"] = dates[0]
+            if len(dates) > 1:
+                params["start_date"] = dates[0]
+                params["end_date"] = dates[1]
+
+        # Extract numbers for ranges or single values
+        numbers = re.findall(r"\d+", text)
+        if numbers:
+            params["value"] = numbers[0]
+            if len(numbers) > 1:
+                params["min_value"] = numbers[0]
+                params["max_value"] = numbers[1]
+                params["min_balance"] = numbers[0]
+                params["max_balance"] = numbers[1]
+
+        return params
+
+    def format_query(self, report_id, user_text):
+        report = self.get_report(report_id)
+        if not report:
+            return None
+
+        # Remove the report ID from the text to avoid extracting numbers from it
+        clean_text = re.sub(rf"\b{report_id}\b", "", user_text, flags=re.IGNORECASE)
+
+        query = report["query"]
+        params = self.extract_parameters(clean_text)
+
+        # Try to fill placeholders in the query
+        try:
+            # We use a default dictionary to avoid KeyError if some params are missing
+            # but we should probably only format if we have matches.
+            # For now, let's just try to format with what we have.
+            formatted_query = query.format(**params)
+            return formatted_query
+        except KeyError as e:
+            # If a required parameter is missing, return original query or handle it
+            print(f"Missing parameter for report {report_id}: {e}")
+            return query
+        except Exception as e:
+            print(f"Error formatting query: {e}")
+            return query
+
     def get_report(self, report_id):
         return self.reports.get(report_id)
 

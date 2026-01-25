@@ -1,6 +1,10 @@
 {
     "AT1201": {
         "name": "Student Attendance Report",
-        "query": "SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = '2024-09-01';"
+        "query": "SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = '{date}';"
+    },
+    "BAL01": {
+        "name": "Teacher Balance Report",
+        "query": "SELECT teacher_id, balance FROM teacher_leave_balance WHERE balance BETWEEN {min_balance} AND {max_balance};"
     }
 }

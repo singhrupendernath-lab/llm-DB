@@ -146,6 +146,7 @@ class TestManagers(unittest.TestCase):
             "name": "Test Report",
             "query": "SELECT * FROM test"
         }
+        mock_rm_instance.format_query.return_value = "SELECT * FROM test"
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
@@ -161,6 +162,29 @@ class TestManagers(unittest.TestCase):
         self.assertEqual(result["sql_queries"], ["SELECT * FROM test"])
         self.assertEqual(result["report_id"], "AT1201")
         mock_rm_instance.log_execution.assert_called_once()
+
+    def test_reports_manager_parameter_extraction(self):
+        from src.reports_manager import ReportsManager
+        rm = ReportsManager()
+
+        # Mock reports for testing extraction
+        rm.reports = {
+            "AT1201": {"query": "SELECT * FROM t WHERE d='{date}'"}
+        }
+
+        query = rm.format_query("AT1201", "I want AT1201 for 2024-05-15")
+        self.assertEqual(query, "SELECT * FROM t WHERE d='2024-05-15'")
+
+    def test_reports_manager_range_extraction(self):
+        from src.reports_manager import ReportsManager
+        rm = ReportsManager()
+
+        rm.reports = {
+            "BAL01": {"query": "SELECT * FROM accounts WHERE bal BETWEEN {min_balance} AND {max_balance}"}
+        }
+
+        query = rm.format_query("BAL01", "Show BAL01 with balance between 100 and 500")
+        self.assertEqual(query, "SELECT * FROM accounts WHERE bal BETWEEN 100 AND 500")
 
 if __name__ == '__main__':
     unittest.main()

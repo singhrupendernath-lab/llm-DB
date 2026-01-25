@@ -114,22 +114,28 @@ class OracleBot:
         report_id = self.reports_manager.find_report_id(question)
         if report_id:
             report = self.reports_manager.get_report(report_id)
-            query = report["query"]
+            # Use format_query to handle parameters
+            query = self.reports_manager.format_query(report_id, question)
             print(f"Detected predefined report {report_id}: {report['name']}")
+            print(f"Executing Query: {query}")
 
             try:
                 # Execute specific query directly
                 data = self.db.run(query)
                 self.reports_manager.log_execution(report_id, query)
 
-                # Use LLM to format the raw data if needed
+                # Stricter formatting prompt to prevent hallucinations
                 format_prompt = (
-                    f"The user requested report {report_id} ({report['name']}).\n"
-                    f"The following data was retrieved from the database:\n{data}\n\n"
-                    "Please present this data in a professional Markdown format."
+                    f"You are a professional Data Analyst. The user requested report {report_id} ({report['name']}).\n"
+                    f"ACTUAL DATA FROM DATABASE:\n{data}\n\n"
+                    "INSTRUCTIONS:\n"
+                    "1. Present the ACTUAL DATA above in a professional Markdown table.\n"
+                    "2. DO NOT hallucinate any names, numbers, or records not present in the ACTUAL DATA.\n"
+                    "3. If the ACTUAL DATA is empty (e.g., '[]' or ''), state clearly that no records were found for this criteria.\n"
+                    "4. ONLY use the columns provided in the data.\n"
                 )
                 if format_instruction:
-                    format_prompt += f" Follow these instructions: {format_instruction}"
+                    format_prompt += f"\nADDITIONAL FORMATTING INSTRUCTIONS: {format_instruction}"
 
                 if hasattr(self.llm, 'invoke'):
                     response = self.llm.invoke(format_prompt)
