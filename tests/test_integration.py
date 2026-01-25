@@ -246,6 +246,19 @@ class TestManagers(unittest.TestCase):
         query = rm.format_query("AT1202", "give me AT1202 for 2024-09-01")
         self.assertEqual(query, "SELECT * FROM t WHERE d = 2024-09-01")
 
+    @patch('src.db_manager.create_engine')
+    @patch('src.db_manager.SQLDatabase')
+    def test_oracle_semicolon_stripping(self, mock_sql_db_class, mock_create_engine):
+        mock_db_instance = MagicMock()
+        mock_sql_db_class.return_value = mock_db_instance
+        def mock_run(command, *args, **kwargs):
+            return f"Executed: {command}"
+        mock_db_instance.run = mock_run
+
+        db_manager = DBManager(db_type="oracle")
+        result = db_manager.get_db().run("SELECT * FROM users;")
+        self.assertEqual(result, "Executed: SELECT * FROM users")
+
     def test_reports_manager_missing_vars(self):
         from src.reports_manager import ReportsManager
         rm = ReportsManager()
