@@ -1,6 +1,79 @@
 {
-    "AT1201": {
-        "name": "Student Attendance Report",
-        "query": "SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = '2024-09-01';"
-    }
+  "ST1001": {
+    "name": "All Students List",
+    "description": "List all students with class and roll number",
+    "query": "SELECT s.id, s.name, s.roll_no, c.class_name FROM students s LEFT JOIN classes c ON c.id = s.class_id;"
+  },
+
+  "ST1002": {
+    "name": "Students by Class",
+    "description": "Get students for a specific class",
+    "query": "SELECT s.name, s.roll_no FROM students s WHERE s.class_id = :class_id;"
+  },
+
+  "AT1201": {
+    "name": "Student Attendance by Date",
+    "description": "Attendance of students on a given date",
+    "query": "SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = :date;"
+  },
+
+  "AT1202": {
+    "name": "Student Attendance Summary",
+    "description": "Present, Absent, Leave count for a date",
+    "query": "SELECT sa.status, COUNT(*) AS total FROM student_attendance sa WHERE sa.date = :date GROUP BY sa.status;"
+  },
+
+  "AT1203": {
+    "name": "Student Attendance Percentage",
+    "description": "Attendance percentage per student",
+    "query": "SELECT s.id, s.name, COUNT(sa.id) AS total_days, SUM(sa.status = 'Present') AS present_days, ROUND((SUM(sa.status = 'Present') / COUNT(sa.id)) * 100, 2) AS attendance_percentage FROM student_attendance sa JOIN students s ON s.id = sa.student_id GROUP BY s.id, s.name;"
+  },
+
+  "TC2001": {
+    "name": "All Teachers List",
+    "description": "List all teachers with subject and contact details",
+    "query": "SELECT u.name, t.subject, t.phone, t.address, t.join_date FROM teachers t JOIN users u ON u.id = t.user_id;"
+  },
+
+  "TC2002": {
+    "name": "Teacher Count",
+    "description": "Total number of teachers",
+    "query": "SELECT COUNT(*) AS total_teachers FROM teachers;"
+  },
+
+  "TA2101": {
+    "name": "Teacher Attendance by Date",
+    "description": "Attendance of teachers on a specific date",
+    "query": "SELECT u.name, ta.status FROM teacher_attendance ta JOIN users u ON u.id = ta.teacher_id WHERE ta.date = :date;"
+  },
+
+  "TA2102": {
+    "name": "Teacher Attendance Summary",
+    "description": "Present, Absent, Leave count for teachers on a date",
+    "query": "SELECT status, COUNT(*) AS total FROM teacher_attendance WHERE date = :date GROUP BY status;"
+  },
+
+  "LV3001": {
+    "name": "Teacher Leave Applications",
+    "description": "All teacher leave applications with status",
+    "query": "SELECT u.name, lt.type_name, tl.start_date, tl.end_date, tl.status FROM teacher_leaves tl JOIN users u ON u.id = tl.teacher_id JOIN leave_types lt ON lt.id = tl.leave_type_id;"
+  },
+
+  "LV3002": {
+    "name": "Teacher Leave Balance",
+    "description": "Remaining leave balance per teacher",
+    "query": "SELECT u.name, lt.type_name, tlb.remaining_days, tlb.total_days FROM teacher_leave_balance tlb JOIN users u ON u.id = tlb.teacher_id JOIN leave_types lt ON lt.id = tlb.leave_type_id;"
+  },
+
+  "DB4001": {
+    "name": "Today Student Attendance Dashboard",
+    "description": "Overall student attendance status today",
+    "query": "SELECT sa.status, COUNT(*) AS total FROM student_attendance sa WHERE sa.date = CURDATE() GROUP BY sa.status;"
+  },
+
+  "DB4002": {
+    "name": "Today Teacher Attendance Dashboard",
+    "description": "Overall teacher attendance status today",
+    "query": "SELECT status, COUNT(*) AS total FROM teacher_attendance WHERE date = CURDATE() GROUP BY status;"
+  }
 }

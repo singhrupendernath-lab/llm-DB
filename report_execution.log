@@ -8,3 +8,8 @@ Report ID: AT1201
 Report Name: Student Attendance Report
 Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = '2024-09-01';
 ----------------------------------------
+Timestamp: 2026-01-25T01:27:51.576558
+Report ID: LV3002
+Report Name: Teacher Leave Balance
+Query: SELECT u.name, lt.type_name, tlb.remaining_days, tlb.total_days FROM teacher_leave_balance tlb JOIN users u ON u.id = tlb.teacher_id JOIN leave_types lt ON lt.id = tlb.leave_type_id;
+----------------------------------------
