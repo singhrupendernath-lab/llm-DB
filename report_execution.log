@@ -13,3 +13,8 @@ Report ID: LV3002
 Report Name: Teacher Leave Balance
 Query: SELECT u.name, lt.type_name, tlb.remaining_days, tlb.total_days FROM teacher_leave_balance tlb JOIN users u ON u.id = tlb.teacher_id JOIN leave_types lt ON lt.id = tlb.leave_type_id;
 ----------------------------------------
+Timestamp: 2026-01-25T01:30:26.679989
+Report ID: LV3001
+Report Name: Teacher Leave Applications
+Query: SELECT u.name, lt.type_name, tl.start_date, tl.end_date, tl.status FROM teacher_leaves tl JOIN users u ON u.id = tl.teacher_id JOIN leave_types lt ON lt.id = tl.leave_type_id;
+----------------------------------------
