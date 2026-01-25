@@ -163,6 +163,31 @@ class TestManagers(unittest.TestCase):
         self.assertEqual(result["report_id"], "AT1201")
         mock_rm_instance.log_execution.assert_called_once()
 
+    @patch('src.oracle_bot.ReportsManager')
+    @patch('src.oracle_bot.create_sql_agent')
+    def test_predefined_report_empty(self, mock_create_agent, mock_reports_manager):
+        mock_db_manager = MagicMock()
+        mock_llm_manager = MagicMock()
+
+        # Setup report mock
+        mock_rm_instance = mock_reports_manager.return_value
+        mock_rm_instance.find_report_id.return_value = "AT1201"
+        mock_rm_instance.get_report.return_value = {
+            "name": "Test Report",
+            "query": "SELECT * FROM test"
+        }
+        mock_rm_instance.format_query.return_value = "SELECT * FROM test"
+
+        bot = OracleBot(mock_db_manager, mock_llm_manager)
+
+        # Mock DB response as empty
+        mock_db_manager.get_db.return_value.run.return_value = "[]"
+
+        result = bot.ask("I want AT1201 reports")
+
+        self.assertEqual(result["answer"], "No records found for the requested criteria.")
+        self.assertEqual(result["sql_queries"], ["SELECT * FROM test"])
+
     def test_reports_manager_parameter_extraction(self):
         from src.reports_manager import ReportsManager
         rm = ReportsManager()
