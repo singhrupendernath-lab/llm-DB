@@ -48,3 +48,23 @@ Report ID: ST1002
 Report Name: Students by Class
 Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
 ----------------------------------------
+Timestamp: 2026-01-25T06:48:50.723479
+Report ID: ST1001
+Report Name: All Students List
+Query: SELECT s.id, s.name, s.roll_no, c.class_name FROM students s LEFT JOIN classes c ON c.id = s.class_id;
+----------------------------------------
+Timestamp: 2026-01-25T06:51:01.697170
+Report ID: AT1201
+Report Name: Student Attendance by Date
+Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = 2026-01-01;
+----------------------------------------
+Timestamp: 2026-01-25T07:07:53.578514
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 2;
+----------------------------------------
+Timestamp: 2026-01-25T07:08:25.067990
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
+----------------------------------------
