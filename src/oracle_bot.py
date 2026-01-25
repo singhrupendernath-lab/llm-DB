@@ -17,9 +17,9 @@ except ImportError:
             ZERO_SHOT_REACT_DESCRIPTION = "zero-shot-react-description"
             OPENAI_FUNCTIONS = "openai-functions"
 
-from .db_manager import DBManager
-from .llm_manager import LLMManager
-from .reports_manager import ReportsManager
+from db_manager import DBManager
+from llm_manager import LLMManager
+from reports_manager import ReportsManager
 
 class OracleBot:
     def __init__(self, db_manager: DBManager, llm_manager: LLMManager):
