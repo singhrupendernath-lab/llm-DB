@@ -33,3 +33,18 @@ Report ID: DB4002
 Report Name: Today Teacher Attendance Dashboard
 Query: SELECT status, COUNT(*) AS total FROM teacher_attendance WHERE date = CURDATE() GROUP BY status;
 ----------------------------------------
+Timestamp: 2026-01-25T05:17:08.581789
+Report ID: AT1201
+Report Name: Student Attendance by Date
+Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = 2025-11-07;
+----------------------------------------
+Timestamp: 2026-01-25T05:18:34.400345
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
+----------------------------------------
+Timestamp: 2026-01-25T05:19:45.696408
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
+----------------------------------------
