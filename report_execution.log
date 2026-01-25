@@ -1,0 +1,5 @@
+Timestamp: 2026-01-24T22:51:28.972796
+Report ID: AT1201
+Report Name: Student Attendance Report
+Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = '2024-09-01';
+----------------------------------------
