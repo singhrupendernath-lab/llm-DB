@@ -120,18 +120,25 @@ class OracleBot:
                 data = self.db.run(query)
                 self.reports_manager.log_execution(report_id, query)
 
-                # Stricter formatting prompt to prevent hallucinations
+                # Strict Python check for empty data to prevent hallucinations
+                if not data or data == "[]" or data == "()":
+                    return {
+                        "answer": "No records found for the requested criteria.",
+                        "sql_queries": [query],
+                        "report_id": report_id
+                    }
+
+                # Minimal prompt for formatting to avoid LLM loops/repetitions
                 format_prompt = (
-                    f"You are a professional Data Analyst. The user requested report {report_id} ({report['name']}).\n"
-                    f"ACTUAL DATA FROM DATABASE:\n{data}\n\n"
-                    "INSTRUCTIONS:\n"
-                    "1. Present the ACTUAL DATA above in a professional Markdown table.\n"
-                    "2. DO NOT hallucinate any names, numbers, or records not present in the ACTUAL DATA.\n"
-                    "3. If the ACTUAL DATA is empty (e.g., '[]' or ''), state clearly that no records were found for this criteria.\n"
-                    "4. ONLY use the columns provided in the data.\n"
+                    f"Transform the following database results into a professional Markdown table.\n"
+                    f"Data: {data}\n\n"
+                    "Rules:\n"
+                    "1. Output ONLY the table.\n"
+                    "2. Do not add any introductory or closing text.\n"
+                    "3. Do not repeat the table."
                 )
                 if format_instruction:
-                    format_prompt += f"\nADDITIONAL FORMATTING INSTRUCTIONS: {format_instruction}"
+                    format_prompt += f"\nNote: {format_instruction}"
 
                 if hasattr(self.llm, 'invoke'):
                     response = self.llm.invoke(format_prompt)
