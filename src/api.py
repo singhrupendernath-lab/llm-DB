@@ -1,10 +1,10 @@
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from src.db_manager import DBManager
-from src.llm_manager import LLMManager
-from src.oracle_bot import OracleBot
-from src.config import Config
+from db_manager import DBManager
+from llm_manager import LLMManager
+from oracle_bot import OracleBot
+from config import Config
 import uvicorn
 
 app = FastAPI(title="DB-LLM RAG API", description="API to interact with databases using natural language")
