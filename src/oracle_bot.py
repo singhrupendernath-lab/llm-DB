@@ -109,6 +109,15 @@ class OracleBot:
         report_id = self.reports_manager.find_report_id(question)
         if report_id:
             report = self.reports_manager.get_report(report_id)
+
+            # Check for missing variables
+            missing = self.reports_manager.get_missing_variables(report_id, question)
+            if missing:
+                return {
+                    "answer": f"The report '{report['name']}' ({report_id}) requires additional information: {', '.join(missing)}. Please provide these details.",
+                    "sql_queries": []
+                }
+
             # Use format_query to handle parameters
             query = self.reports_manager.format_query(report_id, question)
             print(f"Detected predefined report {report_id}: {report['name']}")
