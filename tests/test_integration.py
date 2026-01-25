@@ -186,5 +186,16 @@ class TestManagers(unittest.TestCase):
         query = rm.format_query("BAL01", "Show BAL01 with balance between 100 and 500")
         self.assertEqual(query, "SELECT * FROM accounts WHERE bal BETWEEN 100 AND 500")
 
+    def test_reports_manager_colon_syntax(self):
+        from src.reports_manager import ReportsManager
+        rm = ReportsManager()
+
+        rm.reports = {
+            "AT1202": {"query": "SELECT * FROM t WHERE d = :date"}
+        }
+
+        query = rm.format_query("AT1202", "give me AT1202 for 2024-09-01")
+        self.assertEqual(query, "SELECT * FROM t WHERE d = 2024-09-01")
+
 if __name__ == '__main__':
     unittest.main()

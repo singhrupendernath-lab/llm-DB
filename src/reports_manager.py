@@ -38,6 +38,9 @@ class ReportsManager:
         numbers = re.findall(r"\d+", text)
         if numbers:
             params["value"] = numbers[0]
+            params["class_id"] = numbers[0]
+            params["teacher_id"] = numbers[0]
+            params["student_id"] = numbers[0]
             if len(numbers) > 1:
                 params["min_value"] = numbers[0]
                 params["max_value"] = numbers[1]
@@ -55,6 +58,9 @@ class ReportsManager:
         clean_text = re.sub(rf"\b{report_id}\b", "", user_text, flags=re.IGNORECASE)
 
         query = report["query"]
+        # Support :variable by converting to {variable}
+        query = re.sub(r":(\w+)", r"{\1}", query)
+
         params = self.extract_parameters(clean_text)
 
         # Try to fill placeholders in the query
