@@ -14,3 +14,5 @@ llama-cpp-python
 huggingface_hub
 fastapi
 uvicorn
+streamlit
+requests
