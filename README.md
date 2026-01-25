@@ -84,6 +84,21 @@ Or pass a query directly:
 python3 src/main.py "How many students are in the database?"
 ```
 
+## API Access
+You can also run the project as a REST API using FastAPI:
+1. **Start the API server**:
+```bash
+python3 run_api.py
+```
+The API will be available at `http://localhost:8000`. You can access the interactive documentation at `http://localhost:8000/docs`.
+
+2. **Example Request**:
+```bash
+curl -X POST "http://localhost:8000/ask" \
+     -H "Content-Type: application/json" \
+     -d '{"question": "how many students?", "format_instruction": "Markdown table"}'
+```
+
 ## Project Structure
 - `src/db_manager.py`: Handles database connections.
 - `src/llm_manager.py`: Manages the connection to the LLM.

@@ -12,3 +12,5 @@ torch
 gguf
 llama-cpp-python
 huggingface_hub
+fastapi
+uvicorn
