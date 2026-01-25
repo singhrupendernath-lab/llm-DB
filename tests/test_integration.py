@@ -60,7 +60,7 @@ class TestManagers(unittest.TestCase):
             model=mock_causal.from_pretrained.return_value,
             tokenizer=mock_tokenizer.from_pretrained.return_value,
             device=-1,
-            max_new_tokens=512,
+            max_new_tokens=256,
             repetition_penalty=1.1,
             truncation=True
         )

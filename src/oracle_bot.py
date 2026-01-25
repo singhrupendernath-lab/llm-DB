@@ -1,11 +1,11 @@
 from langchain_community.agent_toolkits import create_sql_agent
 try:
-    from langchain.memory import ConversationBufferMemory
+    from langchain.memory import ConversationBufferWindowMemory
 except ImportError:
     try:
-        from langchain_classic.memory import ConversationBufferMemory
+        from langchain_classic.memory import ConversationBufferWindowMemory
     except ImportError:
-        from langchain_community.memory import ConversationBufferMemory
+        from langchain_community.memory import ConversationBufferWindowMemory
 
 try:
     from langchain.agents.agent_types import AgentType
@@ -29,8 +29,12 @@ class OracleBot:
         self.db = self.db_manager.get_db()
         self.reports_manager = ReportsManager()
 
-        # Initialize Memory
-        self.memory = ConversationBufferMemory(memory_key="chat_history", return_messages=True)
+        # Initialize Memory - using Window memory to save context tokens
+        self.memory = ConversationBufferWindowMemory(
+            memory_key="chat_history",
+            return_messages=True,
+            k=3
+        )
 
         # Determine agent type
         # tool-calling is preferred for OpenAI and ChatHuggingFace (Llama 3.1)
@@ -46,34 +50,29 @@ class OracleBot:
         except Exception:
             table_names_str = "all tables"
 
-        # Enhanced prompt with memory and dialect placeholder
-        # We use {{chat_history}} so it survives the first .format() and remains a variable for the prompt template.
+        # Minimalist prompt to save context tokens
         prefix = (
-            "You are an expert Data Analyst and SQL Engineer. You are helpful and concise.\n"
-            "You have access to a {dialect} database.\n"
-            f"Available tables are: {table_names_str}\n\n"
-            "CURRENT CONVERSATION LOG:\n"
-            "{{chat_history}}\n\n"
-            "INSTRUCTIONS:\n"
-            "1. If the question is a greeting or general, answer it directly.\n"
-            "2. If the question requires database access, use 'sql_db_schema' to check relevant tables.\n"
-            "3. ALWAYS verify the schema before writing a query.\n"
-            "4. Use ONLY the tools provided. DO NOT hallucinate tools.\n"
-            "5. After 'Action Input:', you MUST STOP. DO NOT generate 'Observation:' yourself.\n"
-            "6. Provide the Final Answer in a friendly, decorated Markdown format.\n\n"
-            "Top K results: {top_k}\n"
-        )
+            "You are an expert SQL Data Analyst. Available tables: {table_names_str}.\n"
+            "Dialect: {dialect}. Top K: {top_k}.\n"
+            "History: {{chat_history}}\n\n"
+            "RULES:\n"
+            "1. Greets? Answer direct.\n"
+            "2. DB query? Use 'sql_db_schema' first.\n"
+            "3. ONLY use tools below. NO hallucinations.\n"
+            "4. STOP after 'Action Input:'.\n"
+            "5. NO new questions after 'Final Answer'.\n"
+        ).replace("{table_names_str}", table_names_str)
 
         if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
             prefix += (
-                "FORMAT TO FOLLOW:\n"
-                "Thought: I need to ...\n"
-                "Action: the action to take\n"
-                "Action Input: the input to the action\n"
-                "Observation: the result of the action (provided by system)\n"
-                "... (repeat Thought/Action/Action Input/Observation if needed)\n"
-                "Thought: I now know the final answer\n"
-                "Final Answer: [Your decorated response]\n\n"
+                "FORMAT:\n"
+                "Thought: [reasoning]\n"
+                "Action: [tool]\n"
+                "Action Input: [input]\n"
+                "Observation: [system result]\n"
+                "... (repeat if needed)\n"
+                "Thought: I have the answer\n"
+                "Final Answer: [Markdown answer]\n"
             )
 
         # Custom suffix to avoid the hardcoded "Thought: I should look at the tables"
@@ -101,7 +100,7 @@ class OracleBot:
             early_stopping_method="generate",
             agent_executor_kwargs={
                 "memory": self.memory,
-                "handle_parsing_errors": "Check your format. Remember to use Thought, Action, Action Input, and let the system provide Observation. Do not hallucinate tools."
+                "handle_parsing_errors": "Error! Use: Thought, Action, Action Input. STOP after Input."
             }
         )
 
@@ -172,17 +171,38 @@ class OracleBot:
                 "sql_queries": sql_queries
             }
         except Exception as e:
+            # Fallback logic: check if we have results in intermediate steps even if it failed at the end
+            # This handles cases where the LLM fetched the data but failed to parse the final answer or hit token limit
+            sql_queries = []
+            last_observation = None
+
+            # If the error object has partial results (some langchain versions do)
+            if hasattr(e, 'intermediate_steps'):
+                for step in e.intermediate_steps:
+                    if step[0].tool == "sql_db_query":
+                        sql_queries.append(step[0].tool_input)
+                        last_observation = step[1]
+
             try:
                 print(f"Agent failed, falling back to direct LLM: {e}")
+
+                fallback_prompt = full_query
+                if last_observation:
+                    fallback_prompt = (
+                        f"The user asked: {full_query}\n"
+                        f"Database result found during execution: {last_observation}\n"
+                        "Please provide the final answer based on this database result."
+                    )
+
                 if hasattr(self.llm, 'invoke'):
-                    response = self.llm.invoke(full_query)
+                    response = self.llm.invoke(fallback_prompt)
                     answer = response.content if hasattr(response, 'content') else str(response)
                 else:
-                    answer = self.llm(full_query)
+                    answer = self.llm(fallback_prompt)
 
                 return {
                     "answer": answer,
-                    "sql_queries": [],
+                    "sql_queries": sql_queries,
                     "error": str(e)
                 }
             except Exception as e2:

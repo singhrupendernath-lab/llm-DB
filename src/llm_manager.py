@@ -45,7 +45,7 @@ class LLMManager:
                 self.model_name,
                 token=Config.HF_TOKEN,
                 trust_remote_code=True,
-                model_max_length=Config.HF_MAX_LENGTH
+                model_max_length=max(Config.HF_MAX_LENGTH, 2048)
             )
 
             model_kwargs = {
@@ -72,7 +72,7 @@ class LLMManager:
                 model=model,
                 tokenizer=tokenizer,
                 device=device,
-                max_new_tokens=512,
+                max_new_tokens=256, # reduced to save window space
                 repetition_penalty=1.1,
                 truncation=True
             )
