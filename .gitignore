@@ -1,5 +1,6 @@
 __pycache__/
 API.log
+src/init_mysql.sql
 .LLM_DB
 *.py[cod]
 *$py.class
@@ -7,7 +8,7 @@ API.log
 *.db
 .pytest_cache/
 models/
-Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
+models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
 *.gguf
 *.bin
 *.safetensors

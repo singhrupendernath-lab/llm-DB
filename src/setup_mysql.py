@@ -1,5 +1,5 @@
 import pymysql
-from src.config import Config
+from config import Config
 
 def setup_mysql():
     try:
@@ -7,7 +7,8 @@ def setup_mysql():
             host=Config.MYSQL_HOST,
             user=Config.MYSQL_USER,
             password=Config.MYSQL_PASSWORD,
-            port=int(Config.MYSQL_PORT)
+            port=int(Config.MYSQL_PORT),
+            database=Config.MYSQL_DB
         )
 
         with connection.cursor() as cursor:
