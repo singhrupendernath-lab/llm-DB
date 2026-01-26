@@ -56,7 +56,7 @@ class TestManagers(unittest.TestCase):
 
         mock_tokenizer.from_pretrained.assert_called()
         mock_pipeline.assert_called_with(
-            "text-generation",
+            "conversational",
             model=mock_causal.from_pretrained.return_value,
             tokenizer=mock_tokenizer.from_pretrained.return_value,
             device=-1,
@@ -244,7 +244,8 @@ class TestManagers(unittest.TestCase):
         }
 
         query = rm.format_query("AT1202", "give me AT1202 for 2024-09-01")
-        self.assertEqual(query, "SELECT * FROM t WHERE d = 2024-09-01")
+        # Now we expect quotes
+        self.assertEqual(query, "SELECT * FROM t WHERE d = '2024-09-01'")
 
     @patch('src.db_manager.create_engine')
     @patch('src.db_manager.SQLDatabase')
