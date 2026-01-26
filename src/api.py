@@ -6,6 +6,7 @@ from llm_manager import LLMManager
 from oracle_bot import OracleBot
 from config import Config
 import uvicorn
+from fastapi.middleware.cors import CORSMiddleware
 
 app = FastAPI(title="DB-LLM RAG API", description="API to interact with databases using natural language")
 

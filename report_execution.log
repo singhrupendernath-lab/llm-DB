@@ -103,3 +103,43 @@ Report ID: ST1002
 Report Name: Students by Class
 Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 4;
 ----------------------------------------
+Timestamp: 2026-01-26T06:50:54.525644
+Report ID: ST1001
+Report Name: All Students List
+Query: SELECT s.id, s.name, s.roll_no, c.class_name FROM students s LEFT JOIN classes c ON c.id = s.class_id;
+----------------------------------------
+Timestamp: 2026-01-26T06:56:02.363058
+Report ID: DB4002
+Report Name: Today Teacher Attendance Dashboard
+Query: SELECT status, COUNT(*) AS total FROM teacher_attendance WHERE date = CURDATE() GROUP BY status;
+----------------------------------------
+Timestamp: 2026-01-26T06:57:55.628199
+Report ID: AT1201
+Report Name: Student Attendance by Date
+Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = 2025-11-08;
+----------------------------------------
+Timestamp: 2026-01-26T06:58:22.353458
+Report ID: AT1201
+Report Name: Student Attendance by Date
+Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = 2025-11-07;
+----------------------------------------
+Timestamp: 2026-01-26T07:14:50.476536
+Report ID: AT1201
+Report Name: Student Attendance by Date
+Query: SELECT s.name, s.roll_no, sa.status FROM student_attendance sa JOIN students s ON s.id = sa.student_id WHERE sa.date = 2025-11-07;
+----------------------------------------
+Timestamp: 2026-01-26T07:29:58.068009
+Report ID: AT1203
+Report Name: Student Attendance Percentage
+Query: SELECT s.id, s.name, COUNT(sa.id) AS total_days, SUM(sa.status = 'Present') AS present_days, ROUND((SUM(sa.status = 'Present') / COUNT(sa.id)) * 100, 2) AS attendance_percentage FROM student_attendance sa JOIN students s ON s.id = sa.student_id GROUP BY s.id, s.name;
+----------------------------------------
+Timestamp: 2026-01-26T07:37:19.100396
+Report ID: AT1203
+Report Name: Student Attendance Percentage
+Query: SELECT s.id, s.name, COUNT(sa.id) AS total_days, SUM(sa.status = 'Present') AS present_days, ROUND((SUM(sa.status = 'Present') / COUNT(sa.id)) * 100, 2) AS attendance_percentage FROM student_attendance sa JOIN students s ON s.id = sa.student_id GROUP BY s.id, s.name;
+----------------------------------------
+Timestamp: 2026-01-26T07:43:08.433856
+Report ID: AT1203
+Report Name: Student Attendance Percentage
+Query: SELECT s.id, s.name, COUNT(sa.id) AS total_days, SUM(sa.status = 'Present') AS present_days, ROUND((SUM(sa.status = 'Present') / COUNT(sa.id)) * 100, 2) AS attendance_percentage FROM student_attendance sa JOIN students s ON s.id = sa.student_id GROUP BY s.id, s.name;
+----------------------------------------

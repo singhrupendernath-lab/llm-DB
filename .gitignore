@@ -1,5 +1,5 @@
 __pycache__/
-report_execution.log
+API.log
 .LLM_DB
 *.py[cod]
 *$py.class
@@ -11,4 +11,4 @@ Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
 *.gguf
 *.bin
 *.safetensors
-
+reports_execution.log

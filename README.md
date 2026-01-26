@@ -103,7 +103,7 @@ curl -X POST "http://localhost:8000/ask" \
 A user-friendly web interface is provided using Streamlit:
 1. **Start the Frontend**:
 ```bash
-python3 run_frontend.py
+streamlit run src/frontend.py
 ```
 The frontend will be available at `http://localhost:8501`. It connects to the FastAPI backend, so ensure the backend is running.
 

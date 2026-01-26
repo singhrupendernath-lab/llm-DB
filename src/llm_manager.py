@@ -131,7 +131,7 @@ class LLMManager:
                 n_data=16,
                 n_threads=os.cpu_count() or 4,
                 temperature=0,
-                verbose=True
+                verbose=False
                # stop=["Observation:", "\nObservation:"]
             )
         else:
