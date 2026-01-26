@@ -1,13 +1,30 @@
 from fastapi import FastAPI, HTTPException, Body
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
+<<<<<<< HEAD
 from db_manager import DBManager
 from llm_manager import LLMManager
 from oracle_bot import OracleBot
 from config import Config
+=======
+from src.db_manager import DBManager
+from src.llm_manager import LLMManager
+from src.oracle_bot import OracleBot
+from src.config import Config
+from fastapi.middleware.cors import CORSMiddleware
+>>>>>>> origin/feature/mysql-hf-support-9712919405471788199
 import uvicorn
 
 app = FastAPI(title="DB-LLM RAG API", description="API to interact with databases using natural language")
+
+# Enable CORS for frontend communication
+app.add_middleware(
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
 # Global instances
 bot = None
