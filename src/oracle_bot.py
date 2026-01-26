@@ -20,42 +20,55 @@ except ImportError:
 from .db_manager import DBManager
 from .llm_manager import LLMManager
 from .reports_manager import ReportsManager
+from .vector_manager import VectorManager
+from langchain_community.utilities import SQLDatabase
 
 class OracleBot:
     def __init__(self, db_manager: DBManager, llm_manager: LLMManager):
         self.db_manager = db_manager
         self.llm_manager = llm_manager
         self.llm = self.llm_manager.get_llm()
-        self.db = self.db_manager.get_db()
         self.reports_manager = ReportsManager()
+        self.vector_manager = VectorManager(db_manager)
 
-        # Initialize Memory - using Window memory to save context tokens
-        self.memory = ConversationBufferWindowMemory(
-            memory_key="chat_history",
-            return_messages=True,
-            k=3
-        )
+        # Store memories by session_id
+        self.memories = {}
+        # Store executors by session_id (optional, can also recreate)
+        self.executors = {}
 
-        # Determine agent type
-        # tool-calling is preferred for OpenAI.
-        # For Hugging Face models, tool-calling often fails with "Bad request" (400)
-        # on certain Inference API providers (like Novita) because of the tools schema.
-        # ReAct (ZERO_SHOT_REACT_DESCRIPTION) is more compatible with wide range of HF models.
+    def _get_memory(self, session_id):
+        if session_id not in self.memories:
+            self.memories[session_id] = ConversationBufferWindowMemory(
+                memory_key="chat_history",
+                return_messages=True,
+                k=3
+            )
+        return self.memories[session_id]
+
+    def _create_agent_executor(self, session_id, include_tables=None):
+        memory = self._get_memory(session_id)
+
+        # Create a dynamic DB instance with only relevant tables to save tokens
+        db = SQLDatabase(self.db_manager.engine, include_tables=include_tables, sample_rows_in_table_info=2)
+
+        # Oracle semicolon fix
+        if self.db_manager.db_type == "oracle":
+            original_run = db.run
+            def wrapped_run(command, *args, **kwargs):
+                if isinstance(command, str):
+                    command = command.strip().rstrip(';')
+                return original_run(command, *args, **kwargs)
+            db.run = wrapped_run
+
         if self.llm_manager.llm_type == "openai":
             agent_type = "tool-calling"
         else:
             agent_type = AgentType.ZERO_SHOT_REACT_DESCRIPTION
 
-        # Get usable table names to include in prompt for faster reasoning
-        try:
-            table_names_list = self.db.get_usable_table_names()
-            table_names_str = ", ".join(table_names_list)
-        except Exception:
-            table_names_str = "all tables"
+        table_names_str = ", ".join(include_tables) if include_tables else "all tables"
 
-        # Minimalist prompt to save context tokens
         prefix = (
-            "You are an expert SQL Data Analyst. Available tables: {table_names_str}.\n"
+            "You are an expert SQL Data Analyst. Relevant tables: {table_names_str}.\n"
             "Dialect: {dialect}. Top K: {top_k}.\n"
             "History: {{chat_history}}\n\n"
             "RULES:\n"
@@ -77,11 +90,6 @@ class OracleBot:
                 "Thought: I have the answer\n"
                 "Final Answer: [Markdown answer]\n"
             )
-
-        # Custom suffix to avoid the hardcoded "Thought: I should look at the tables"
-        # which often causes looping in modern models like Llama 3.
-        # We only apply this to ReAct agents.
-        if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
             suffix = (
                 "Begin!\n\n"
                 "Question: {input}\n"
@@ -90,10 +98,9 @@ class OracleBot:
         else:
             suffix = None
 
-        # Increase iterations as requested by user
-        self.agent_executor = create_sql_agent(
+        return create_sql_agent(
             llm=self.llm,
-            db=self.db,
+            db=db,
             verbose=True,
             agent_type=agent_type,
             prefix=prefix,
@@ -102,18 +109,16 @@ class OracleBot:
             max_iterations=30,
             early_stopping_method="generate",
             agent_executor_kwargs={
-                "memory": self.memory,
+                "memory": memory,
                 "handle_parsing_errors": "Error! Use: Thought, Action, Action Input. STOP after Input."
             }
         )
 
-    def ask(self, question: str, format_instruction: str = None):
+    def ask(self, question: str, format_instruction: str = None, session_id: str = "default"):
         # Check for predefined reports first
         report_id = self.reports_manager.find_report_id(question)
         if report_id:
             report = self.reports_manager.get_report(report_id)
-
-            # Check for missing variables
             missing = self.reports_manager.get_missing_variables(report_id, question)
             if missing:
                 return {
@@ -121,41 +126,36 @@ class OracleBot:
                     "sql_queries": []
                 }
 
-            # Use format_query to handle parameters
             query = self.reports_manager.format_query(report_id, question)
-            print(f"Detected predefined report {report_id}: {report['name']}")
-            print(f"Executing Query: {query}")
-
             try:
-                # Execute specific query directly
-                data = self.db.run(query)
+                # We use the raw engine to execute predefined reports to avoid SQLDatabase overhead
+                with self.db_manager.engine.connect() as conn:
+                    import sqlalchemy
+                    data = conn.execute(sqlalchemy.text(query)).fetchall()
+
                 self.reports_manager.log_execution(report_id, query)
 
-                # Strict Python check for empty data to prevent hallucinations
-                if not data or data == "[]" or data == "()":
+                if not data:
                     return {
                         "answer": "No records found for the requested criteria.",
                         "sql_queries": [query],
                         "report_id": report_id
                     }
 
-                # Minimal prompt for formatting to avoid LLM loops/repetitions
                 format_prompt = (
                     f"Transform the following database results into a professional Markdown table.\n"
                     f"Data: {data}\n\n"
-                    "Rules:\n"
-                    "1. Output ONLY the table.\n"
-                    "2. Do not add any introductory or closing text.\n"
-                    "3. Do not repeat the table."
+                    "Rules:\n1. Output ONLY the table.\n2. Do not add intro/outro text."
                 )
                 if format_instruction:
                     format_prompt += f"\nNote: {format_instruction}"
 
-                if hasattr(self.llm, 'invoke'):
-                    response = self.llm.invoke(format_prompt)
-                    answer = response.content if hasattr(response, 'content') else str(response)
-                else:
-                    answer = self.llm(format_prompt)
+                response = self.llm.invoke(format_prompt) if hasattr(self.llm, 'invoke') else self.llm(format_prompt)
+                answer = response.content if hasattr(response, 'content') else str(response)
+
+                # Add to memory manually for predefined reports
+                memory = self._get_memory(session_id)
+                memory.save_context({"input": question}, {"output": answer})
 
                 return {
                     "answer": answer,
@@ -164,15 +164,20 @@ class OracleBot:
                 }
             except Exception as e:
                 print(f"Error executing predefined report: {e}")
-                # Fall back to agent if predefined query fails
+
+        # RAG: Find relevant tables
+        relevant_tables = self.vector_manager.get_relevant_tables(question)
+        print(f"RAG retrieved relevant tables: {relevant_tables}")
+
+        # Create/Get executor for this session and this specific query (due to dynamic tables)
+        agent_executor = self._create_agent_executor(session_id, include_tables=relevant_tables)
 
         full_query = question
         if format_instruction:
             full_query += f"\n\nPlease format the output as follows: {format_instruction}"
         
         try:
-            result = self.agent_executor.invoke({"input": full_query})
-
+            result = agent_executor.invoke({"input": full_query})
             sql_queries = []
             for step in result.get("intermediate_steps", []):
                 if hasattr(step[0], 'tool') and step[0].tool == "sql_db_query":
@@ -183,12 +188,8 @@ class OracleBot:
                 "sql_queries": sql_queries
             }
         except Exception as e:
-            # Fallback logic: check if we have results in intermediate steps even if it failed at the end
-            # This handles cases where the LLM fetched the data but failed to parse the final answer or hit token limit
             sql_queries = []
             last_observation = None
-
-            # If the error object has partial results (some langchain versions do)
             if hasattr(e, 'intermediate_steps'):
                 for step in e.intermediate_steps:
                     if step[0].tool == "sql_db_query":
@@ -196,21 +197,14 @@ class OracleBot:
                         last_observation = step[1]
 
             try:
-                print(f"Agent failed, falling back to direct LLM: {e}")
+                fallback_prompt = (
+                    f"The user asked: {full_query}\n"
+                    f"Database result found: {last_observation}\n"
+                    "Please provide the final answer."
+                ) if last_observation else full_query
 
-                fallback_prompt = full_query
-                if last_observation:
-                    fallback_prompt = (
-                        f"The user asked: {full_query}\n"
-                        f"Database result found during execution: {last_observation}\n"
-                        "Please provide the final answer based on this database result."
-                    )
-
-                if hasattr(self.llm, 'invoke'):
-                    response = self.llm.invoke(fallback_prompt)
-                    answer = response.content if hasattr(response, 'content') else str(response)
-                else:
-                    answer = self.llm(fallback_prompt)
+                response = self.llm.invoke(fallback_prompt) if hasattr(self.llm, 'invoke') else self.llm(fallback_prompt)
+                answer = response.content if hasattr(response, 'content') else str(response)
 
                 return {
                     "answer": answer,
@@ -219,10 +213,6 @@ class OracleBot:
                 }
             except Exception as e2:
                 return {
-                    "answer": f"Error occurred: {str(e)} and fallback also failed: {str(e2)}",
+                    "answer": f"Error: {str(e)}",
                     "sql_queries": []
                 }
-
-    def generate_report(self, report_description: str, format_type: str = "table"):
-        prompt = f"Generate a detailed report for: {report_description}. Output format: {format_type}."
-        return self.ask(prompt)

@@ -16,3 +16,6 @@ fastapi
 uvicorn
 streamlit
 requests
+chromadb
+sentence-transformers
+langchain-chroma
