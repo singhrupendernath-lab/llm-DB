@@ -36,6 +36,7 @@ async def startup_event():
 class QueryRequest(BaseModel):
     question: str
     format_instruction: Optional[str] = None
+    session_id: Optional[str] = "default"
 
 class QueryResponse(BaseModel):
     answer: str
@@ -54,9 +55,15 @@ def ask(request: QueryRequest):
         raise HTTPException(status_code=503, detail="Bot not initialized")
 
     try:
-        result = bot.ask(request.question, request.format_instruction)
+        result = bot.ask(
+            request.question,
+            request.format_instruction,
+            session_id=request.session_id
+        )
         return result
     except Exception as e:
+        import traceback
+        traceback.print_exc()
         raise HTTPException(status_code=500, detail=str(e))
 
 @app.get("/reports")

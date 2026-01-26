@@ -74,8 +74,6 @@ class TestManagers(unittest.TestCase):
         Config.HF_TASK = None
 
         mock_endpoint_instance = MagicMock()
-        # We need the mock to look like a HuggingFaceEndpoint to pass validation if it were real,
-        # but since we mock ChatHuggingFace too, we just need to ensure it's called.
         mock_hf_endpoint.return_value = mock_endpoint_instance
 
         llm_manager = LLMManager(llm_type="huggingface_api")
@@ -112,15 +110,15 @@ class TestManagers(unittest.TestCase):
         )
         mock_llamacpp.assert_called()
 
+    @patch('src.oracle_bot.SQLDatabase')
+    @patch('src.oracle_bot.VectorManager')
     @patch('src.oracle_bot.create_sql_agent')
-    def test_oracle_bot(self, mock_create_sql_agent):
+    def test_oracle_bot(self, mock_create_sql_agent, mock_vector_manager, mock_sql_db):
         mock_db_manager = MagicMock()
         mock_llm_manager = MagicMock()
         mock_db_manager.db_type = "sqlite"
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
-
-        mock_create_sql_agent.assert_called()
 
         # Mocking result
         mock_create_sql_agent.return_value.invoke.return_value = {
@@ -129,11 +127,14 @@ class TestManagers(unittest.TestCase):
         }
 
         result = bot.ask("how many students?")
+        mock_create_sql_agent.assert_called()
         self.assertEqual(result["answer"], "Result")
 
+    @patch('src.oracle_bot.SQLDatabase')
+    @patch('src.oracle_bot.VectorManager')
     @patch('src.oracle_bot.ReportsManager')
     @patch('src.oracle_bot.create_sql_agent')
-    def test_predefined_report(self, mock_create_agent, mock_reports_manager):
+    def test_predefined_report(self, mock_create_agent, mock_reports_manager, mock_vm, mock_sql_db):
         mock_db_manager = MagicMock()
         mock_llm_manager = MagicMock()
         mock_llm = MagicMock()
@@ -151,8 +152,9 @@ class TestManagers(unittest.TestCase):
 
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
-        # Mock DB response
-        mock_db_manager.get_db.return_value.run.return_value = "[('data',)]"
+        # Mock DB response for predefined report (raw engine)
+        mock_conn = mock_db_manager.engine.connect.return_value.__enter__.return_value
+        mock_conn.execute.return_value.fetchall.return_value = [('data',)]
 
         # Mock LLM response for formatting
         mock_llm.invoke.return_value.content = "Formatted Data"
@@ -164,9 +166,11 @@ class TestManagers(unittest.TestCase):
         self.assertEqual(result["report_id"], "AT1201")
         mock_rm_instance.log_execution.assert_called_once()
 
+    @patch('src.oracle_bot.SQLDatabase')
+    @patch('src.oracle_bot.VectorManager')
     @patch('src.oracle_bot.ReportsManager')
     @patch('src.oracle_bot.create_sql_agent')
-    def test_predefined_report_empty(self, mock_create_agent, mock_reports_manager):
+    def test_predefined_report_empty(self, mock_create_agent, mock_reports_manager, mock_vm, mock_sql_db):
         mock_db_manager = MagicMock()
         mock_llm_manager = MagicMock()
 
@@ -183,16 +187,19 @@ class TestManagers(unittest.TestCase):
         bot = OracleBot(mock_db_manager, mock_llm_manager)
 
         # Mock DB response as empty
-        mock_db_manager.get_db.return_value.run.return_value = "[]"
+        mock_conn = mock_db_manager.engine.connect.return_value.__enter__.return_value
+        mock_conn.execute.return_value.fetchall.return_value = []
 
         result = bot.ask("I want AT1201 reports")
 
         self.assertEqual(result["answer"], "No records found for the requested criteria.")
         self.assertEqual(result["sql_queries"], ["SELECT * FROM test"])
 
+    @patch('src.oracle_bot.SQLDatabase')
+    @patch('src.oracle_bot.VectorManager')
     @patch('src.oracle_bot.ReportsManager')
     @patch('src.oracle_bot.create_sql_agent')
-    def test_predefined_report_missing_vars(self, mock_create_agent, mock_reports_manager):
+    def test_predefined_report_missing_vars(self, mock_create_agent, mock_reports_manager, mock_vm, mock_sql_db):
         mock_db_manager = MagicMock()
         mock_llm_manager = MagicMock()
 

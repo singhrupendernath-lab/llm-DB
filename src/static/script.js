@@ -12,6 +12,12 @@ const modal = document.getElementById('report-modal');
 const modalForm = document.getElementById('modal-form');
 const closeModal = document.querySelector('.close-modal');
 let currentReportId = null;
+let sessionId = localStorage.getItem('session_id');
+
+if (!sessionId) {
+    sessionId = 'session_' + Math.random().toString(36).substr(2, 9);
+    localStorage.setItem('session_id', sessionId);
+}
 
 // Initialize
 async function init() {
@@ -125,7 +131,7 @@ async function askQuestion(question) {
         const response = await fetch(`${API_URL}/ask`, {
             method: 'POST',
             headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({ question })
+            body: JSON.stringify({ question, session_id: sessionId })
         });
 
         const data = await response.json();
