@@ -68,3 +68,38 @@ Report ID: ST1002
 Report Name: Students by Class
 Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
 ----------------------------------------
+Timestamp: 2026-01-25T08:33:10.179809
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
+----------------------------------------
+Timestamp: 2026-01-25T08:35:40.181556
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
+----------------------------------------
+Timestamp: 2026-01-25T08:36:34.801510
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 5;
+----------------------------------------
+Timestamp: 2026-01-25T08:38:35.594786
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 2;
+----------------------------------------
+Timestamp: 2026-01-25T08:39:10.739612
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 2;
+----------------------------------------
+Timestamp: 2026-01-25T08:40:16.203236
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 4;
+----------------------------------------
+Timestamp: 2026-01-25T08:40:51.471385
+Report ID: ST1002
+Report Name: Students by Class
+Query: SELECT s.name, s.roll_no FROM students s WHERE s.class_id = 4;
+----------------------------------------
