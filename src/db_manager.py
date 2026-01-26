@@ -37,8 +37,20 @@ class DBManager:
             port = Config.MYSQL_PORT
             database = Config.MYSQL_DB
 
-            connection_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
-            return create_engine(connection_url)
+            if not all([user, host, database]):
+                print("Warning: MySQL credentials not fully provided. Falling back to SQLite.")
+                return create_engine(f"sqlite:///{Config.SQLITE_PATH}")
+
+            try:
+                connection_url = f"mysql+pymysql://{user}:{password}@{host}:{port}/{database}"
+                engine = create_engine(connection_url)
+                # Test connection
+                with engine.connect() as conn:
+                    pass
+                return engine
+            except Exception as e:
+                print(f"Warning: Failed to connect to MySQL ({e}). Falling back to SQLite.")
+                return create_engine(f"sqlite:///{Config.SQLITE_PATH}")
 
         elif self.db_type == "oracle":
             user = Config.ORACLE_USER

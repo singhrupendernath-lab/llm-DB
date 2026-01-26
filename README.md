@@ -21,18 +21,29 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
     pip install -r requirements.txt
     ```
 
-2.  **Configure environment variables**:
-    Create a `.env` file with the following:
+2.  **Initialize MySQL (Optional)**:
+    If you want to use MySQL, you can use the provided script to set up the schema and sample data:
+    ```bash
+    # Ensure MySQL is running and you have access
+    python3 src/setup_mysql.py
+    ```
+    Alternatively, run the SQL script directly:
+    ```bash
+    mysql -u root -p < src/init_mysql.sql
+    ```
+
+3.  **Configure environment variables**:
+    Update the `.env` file:
     ```env
     # Database selection: 'sqlite', 'oracle', or 'mysql'
-    DB_TYPE=sqlite
-    
+    DB_TYPE=mysql
+
     # MySQL config
     MYSQL_USER=your_mysql_user
     MYSQL_PASSWORD=your_mysql_password
     MYSQL_HOST=localhost
     MYSQL_PORT=3306
-    MYSQL_DB=your_database
+    MYSQL_DB=demo
     
     # SQLite config
     SQLITE_PATH=demo.db
@@ -40,9 +51,9 @@ This project allows you to interact with various databases (Oracle, MySQL, SQLit
     # LLM selection: 'openai', 'huggingface', 'llamacpp', or 'huggingface_api'
     LLM_TYPE=huggingface_api
 
-    # --- Hugging Face Inference API config ---
-    # Model ID (e.g., 'meta-llama/Llama-3.1-8B-Instruct')
-    HF_MODEL_ID=meta-llama/Llama-3.1-8B-Instruct
+    # --- Hugging Face Inference API config (Recommended for Open Source) ---
+    # Model ID (e.g., 'Qwen/Qwen2.5-7B-Instruct')
+    HF_MODEL_ID=Qwen/Qwen2.5-7B-Instruct
     HF_TOKEN=your_huggingface_token
     # Tip: Some API providers (like Novita) require a specific task.
     # If you get a 'task not supported' error, try:

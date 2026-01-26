@@ -54,29 +54,32 @@ class ReportsManager:
         if not report:
             return None
 
-        # Remove the report ID from the text to avoid extracting numbers from it
         clean_text = re.sub(rf"\b{report_id}\b", "", user_text, flags=re.IGNORECASE)
-
         query = report["query"]
-        # Support :variable by converting to {variable}
-        query = re.sub(r":(\w+)", r"{\1}", query)
-
         params = self.extract_parameters(clean_text)
 
-        # Try to fill placeholders in the query
-        try:
-            # We use a default dictionary to avoid KeyError if some params are missing
-            # but we should probably only format if we have matches.
-            # For now, let's just try to format with what we have.
-            formatted_query = query.format(**params)
-            return formatted_query
-        except KeyError as e:
-            # If a required parameter is missing, return original query or handle it
-            print(f"Missing parameter for report {report_id}: {e}")
-            return query
-        except Exception as e:
-            print(f"Error formatting query: {e}")
-            return query
+        for key, val in params.items():
+            # Placeholders can be :key or {key}
+
+            # Heuristic for replacement
+            is_pure_int = val.isdigit()
+            replacement = val if is_pure_int else f"'{val}'"
+
+            # 1. Replace colon placeholders :key
+            # Use \b to ensure we don't match :key_something
+            query = re.sub(rf"':{key}\b'", f"'{val}'", query)
+            query = re.sub(rf'":{key}\b"', f"'{val}'", query)
+            query = re.sub(rf"(?<!['\"]):{key}\b(?!['\"])", replacement, query)
+
+            # 2. Replace brace placeholders {key}
+            # Braces are usually literal in this context, escape them for regex
+            query = query.replace(f"'{{{key}}}'", f"'{val}'")
+            query = query.replace(f'"{{{key}}}"', f"'{val}'")
+            # For unquoted braces, just replace directly (no \b needed usually for braces)
+            pattern_unquoted = rf"(?<!['\"])\{{{key}\}}(?!['\"])"
+            query = re.sub(pattern_unquoted, replacement, query)
+
+        return query
 
     def get_missing_variables(self, report_id, user_text):
         report = self.get_report(report_id)
@@ -84,11 +87,11 @@ class ReportsManager:
             return []
 
         query = report["query"]
-        # Convert :var to {var}
-        query = re.sub(r":(\w+)", r"{\1}", query)
+        # Convert :var to {var} for uniform variable finding
+        temp_query = re.sub(r":(\w+)", r"{\1}", query)
 
         # Find all required variables in {var} format
-        required_vars = list(set(re.findall(r"\{(\w+)\}", query)))
+        required_vars = list(set(re.findall(r"\{(\w+)\}", temp_query)))
 
         clean_text = re.sub(rf"\b{report_id}\b", "", user_text, flags=re.IGNORECASE)
         params = self.extract_parameters(clean_text)
