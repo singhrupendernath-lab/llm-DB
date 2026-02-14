@@ -1,5 +1,6 @@
 import os
 import threading
+from concurrent.futures import ThreadPoolExecutor
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
@@ -32,6 +33,9 @@ class VectorManager:
         # Initialize schema if empty
         if len(self.schema_db.get()['ids']) == 0:
             self.refresh_schema()
+
+        # Thread pool for background tasks
+        self.executor = ThreadPoolExecutor(max_workers=2)
 
     def refresh_schema(self):
         """Extracts schema from DB and populates Chroma."""
@@ -101,9 +105,8 @@ class VectorManager:
             except Exception as e:
                 print(f"Error saving chat interaction to Vector DB: {e}")
 
-        # Run in background
-        thread = threading.Thread(target=_save)
-        thread.start()
+        # Run in background via thread pool
+        self.executor.submit(_save)
 
     def search_relevant_chat(self, query, k=2):
         """Retrieves relevant past interactions to provide context."""
