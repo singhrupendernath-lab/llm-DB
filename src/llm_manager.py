@@ -127,8 +127,8 @@ class LLMManager:
 
             return LlamaCpp(
                 model_path=model_path,
-                n_ctx=1028,
-                n_data=16,
+                n_ctx=32768,
+                n_data=64,
                 n_threads=os.cpu_count() or 4,
                 temperature=0,
                 verbose=False
