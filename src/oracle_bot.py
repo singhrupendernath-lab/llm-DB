@@ -17,10 +17,10 @@ except ImportError:
             ZERO_SHOT_REACT_DESCRIPTION = "zero-shot-react-description"
             OPENAI_FUNCTIONS = "openai-functions"
 
-from db_manager import DBManager
-from llm_manager import LLMManager
-from reports_manager import ReportsManager
-from vector_manager import VectorManager
+from src.db_manager import DBManager
+from src.llm_manager import LLMManager
+from src.reports_manager import ReportsManager
+from src.vector_manager import VectorManager
 from langchain_community.utilities import SQLDatabase
 
 class OracleBot:

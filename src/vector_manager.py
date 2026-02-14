@@ -2,7 +2,7 @@ import os
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
-from config import Config
+from src.config import Config
 
 class VectorManager:
     def __init__(self, db_manager, collection_name="db_schema"):

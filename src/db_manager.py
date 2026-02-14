@@ -2,7 +2,7 @@ import oracledb
 import os
 from sqlalchemy import create_engine, text
 from langchain_community.utilities import SQLDatabase
-from config import Config
+from src.config import Config
 
 class DBManager:
     def __init__(self, db_type=None, include_tables=None):

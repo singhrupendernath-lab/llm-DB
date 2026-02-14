@@ -3,10 +3,10 @@ from fastapi.staticfiles import StaticFiles
 from fastapi.responses import FileResponse
 from pydantic import BaseModel
 from typing import Optional, List, Dict, Any
-from db_manager import DBManager
-from llm_manager import LLMManager
-from oracle_bot import OracleBot
-from config import Config
+from src.db_manager import DBManager
+from src.llm_manager import LLMManager
+from src.oracle_bot import OracleBot
+from src.config import Config
 import uvicorn
 import os
 from fastapi.middleware.cors import CORSMiddleware

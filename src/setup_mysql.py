@@ -1,5 +1,5 @@
 import pymysql
-from config import Config
+from src.config import Config
 
 def setup_mysql():
     try:
