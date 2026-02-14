@@ -1,4 +1,5 @@
 import os
+import threading
 from langchain_chroma import Chroma
 from langchain_huggingface import HuggingFaceEmbeddings
 from langchain_core.documents import Document
@@ -61,6 +62,10 @@ class VectorManager:
             self.schema_db.add_documents(documents)
             print(f"Added {len(documents)} tables to Vector DB.")
 
+    def get_embedding(self, text):
+        """Generates embedding for a text string once."""
+        return self.embeddings.embed_query(text)
+
     def search_relevant_schema(self, query, k=3):
         """Returns relevant table schemas for a given query."""
         results = self.schema_db.similarity_search(query, k=k)
@@ -71,22 +76,49 @@ class VectorManager:
         results = self.schema_db.similarity_search(query, k=k)
         return [r.metadata["table_name"] for r in results]
 
-    def add_chat_interaction(self, question, answer, sql_queries=None, session_id="default"):
-        """Stores a chat interaction for future retrieval (self-learning)."""
-        content = f"Question: {question}\nAnswer: {answer}"
-        if sql_queries:
-            content += f"\nSQL Queries Used: {', '.join(sql_queries)}"
+    def get_relevant_tables_by_vector(self, embedding, k=3):
+        """Returns names of relevant tables using a pre-calculated vector."""
+        results = self.schema_db.similarity_search_by_vector(embedding, k=k)
+        return [r.metadata["table_name"] for r in results]
 
-        doc = Document(
-            page_content=content,
-            metadata={"session_id": session_id, "type": "chat_interaction"}
-        )
-        self.chat_db.add_documents([doc])
-        print(f"Saved interaction to Chat Vector DB (session: {session_id}).")
+    def add_chat_interaction(self, question, answer, sql_queries=None, session_id="default"):
+        """
+        Stores a chat interaction for future retrieval (self-learning).
+        Executed in a background thread to avoid blocking.
+        """
+        def _save():
+            try:
+                content = f"Question: {question}\nAnswer: {answer}"
+                if sql_queries:
+                    content += f"\nSQL Queries Used: {', '.join(sql_queries)}"
+
+                doc = Document(
+                    page_content=content,
+                    metadata={"session_id": session_id, "type": "chat_interaction"}
+                )
+                self.chat_db.add_documents([doc])
+                print(f"Saved interaction to Chat Vector DB (session: {session_id}).")
+            except Exception as e:
+                print(f"Error saving chat interaction to Vector DB: {e}")
+
+        # Run in background
+        thread = threading.Thread(target=_save)
+        thread.start()
 
     def search_relevant_chat(self, query, k=2):
         """Retrieves relevant past interactions to provide context."""
         results = self.chat_db.similarity_search(query, k=k)
+        if not results:
+            return ""
+
+        context = "Learned Knowledge from past interactions:\n"
+        for r in results:
+            context += f"---\n{r.page_content}\n"
+        return context
+
+    def search_relevant_chat_by_vector(self, embedding, k=2):
+        """Retrieves relevant past interactions using a pre-calculated vector."""
+        results = self.chat_db.similarity_search_by_vector(embedding, k=k)
         if not results:
             return ""
 

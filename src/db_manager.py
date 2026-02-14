@@ -11,6 +11,12 @@ class DBManager:
         # allow limiting tables to reduce prompt size
         self.db = SQLDatabase(self.engine, include_tables=include_tables, sample_rows_in_table_info=2)
 
+        # Cache for usable table names
+        self._usable_table_names = None
+
+        # Cache for dynamic SQLDatabase instances (used in OracleBot)
+        self._db_cache = {}
+
         # Oracle does not support semicolons at the end of SQL statements via its drivers.
         # We wrap the run method to automatically strip it.
         if self.db_type == "oracle":
@@ -67,8 +73,38 @@ class DBManager:
         else:
             raise ValueError(f"Unsupported database type: {self.db_type}")
 
-    def get_db(self):
-        return self.db
+    def get_db(self, include_tables=None):
+        """
+        Returns a SQLDatabase instance. If include_tables is provided,
+        it uses a cached instance or creates a new one.
+        """
+        if include_tables is None:
+            return self.db
+
+        # Use a frozenset for the cache key
+        table_key = frozenset(include_tables)
+        if table_key not in self._db_cache:
+            print(f"Creating new SQLDatabase instance for tables: {include_tables}")
+            new_db = SQLDatabase(self.engine, include_tables=list(table_key), sample_rows_in_table_info=2)
+
+            # Apply Oracle fix to new instance if needed
+            if self.db_type == "oracle":
+                orig_run = new_db.run
+                def wrap(command, *a, **kw):
+                    if isinstance(command, str):
+                        command = command.strip().rstrip(';')
+                    return orig_run(command, *a, **kw)
+                new_db.run = wrap
+
+            self._db_cache[table_key] = new_db
+
+        return self._db_cache[table_key]
+
+    def get_usable_table_names(self):
+        """Returns cached usable table names."""
+        if self._usable_table_names is None:
+            self._usable_table_names = self.db.get_usable_table_names()
+        return self._usable_table_names
 
     def execute_query(self, query):
         if self.db_type == "oracle" and isinstance(query, str):

@@ -48,17 +48,8 @@ class OracleBot:
     def _create_agent_executor(self, session_id, include_tables=None, extra_context=None):
         memory = self._get_memory(session_id)
 
-        # Create a dynamic DB instance with only relevant tables to save tokens
-        db = SQLDatabase(self.db_manager.engine, include_tables=include_tables, sample_rows_in_table_info=2)
-
-        # Oracle semicolon fix
-        if self.db_manager.db_type == "oracle":
-            original_run = db.run
-            def wrapped_run(command, *args, **kwargs):
-                if isinstance(command, str):
-                    command = command.strip().rstrip(';')
-                return original_run(command, *args, **kwargs)
-            db.run = wrapped_run
+        # Create/Get a dynamic DB instance with only relevant tables (Optimized)
+        db = self.db_manager.get_db(include_tables=include_tables)
 
         if self.llm_manager.llm_type == "openai":
             agent_type = "tool-calling"
@@ -121,8 +112,11 @@ class OracleBot:
         )
 
     def ask(self, question: str, format_instruction: str = None, session_id: str = "default"):
-        # Retrieve relevant past interactions for self-learning
-        extra_context = self.vector_manager.search_relevant_chat(question)
+        # Generate question embedding once (Optimization)
+        question_vector = self.vector_manager.get_embedding(question)
+
+        # Retrieve relevant past interactions for self-learning (Optimized)
+        extra_context = self.vector_manager.search_relevant_chat_by_vector(question_vector)
 
         # Check for predefined reports first
         report_id = self.reports_manager.find_report_id(question)
@@ -169,7 +163,7 @@ class OracleBot:
                 memory = self._get_memory(session_id)
                 memory.save_context({"input": question}, {"output": answer})
 
-                # Save to vector DB for self-learning
+                # Save to vector DB for self-learning (Asynchronous)
                 self.vector_manager.add_chat_interaction(question, answer, [query], session_id)
 
                 return {
@@ -180,11 +174,11 @@ class OracleBot:
             except Exception as e:
                 print(f"Error executing predefined report: {e}")
 
-        # RAG: Find relevant tables
-        relevant_tables = self.vector_manager.get_relevant_tables(question)
+        # RAG: Find relevant tables (Optimized)
+        relevant_tables = self.vector_manager.get_relevant_tables_by_vector(question_vector)
 
-        # Filter to only include tables that actually exist in the DB to avoid errors
-        all_tables = self.db_manager.get_db().get_usable_table_names()
+        # Filter to only include tables that actually exist in the DB (Optimized with cache)
+        all_tables = self.db_manager.get_usable_table_names()
         relevant_tables = [t for t in relevant_tables if t in all_tables]
 
         print(f"RAG retrieved relevant tables (filtered): {relevant_tables}")
@@ -203,7 +197,7 @@ class OracleBot:
                 if hasattr(step[0], 'tool') and step[0].tool == "sql_db_query":
                     sql_queries.append(step[0].tool_input)
 
-            # Save to vector DB for self-learning
+            # Save to vector DB for self-learning (Asynchronous)
             self.vector_manager.add_chat_interaction(question, result["output"], sql_queries, session_id)
 
             return {
@@ -232,7 +226,7 @@ class OracleBot:
                 response = self.llm.invoke(fallback_prompt) if hasattr(self.llm, 'invoke') else self.llm(fallback_prompt)
                 answer = response.content if hasattr(response, 'content') else str(response)
 
-                # Save successful fallback to vector DB for self-learning
+                # Save successful fallback to vector DB for self-learning (Asynchronous)
                 self.vector_manager.add_chat_interaction(question, answer, sql_queries, session_id)
 
                 return {
