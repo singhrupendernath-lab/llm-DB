@@ -35,6 +35,8 @@ class LLMManager:
             if not task:
                 if model_type in ["t5", "flan-t5", "bart", "marian"]:
                     task = "text2text-generation"
+                elif "instruct" in self.model_name.lower() or "chat" in self.model_name.lower():
+                    task = "conversational"
                 else:
                     task = "text-generation"
 
