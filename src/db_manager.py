@@ -8,14 +8,12 @@ class DBManager:
     def __init__(self, db_type=None, include_tables=None):
         self.db_type = db_type if db_type is not None else Config.DB_TYPE
         self.engine = self._create_engine()
-        # allow limiting tables to reduce prompt size
+        # allow limiting tables to reduce prompt size.
+        # Reflections are done once here at startup.
         self.db = SQLDatabase(self.engine, include_tables=include_tables, sample_rows_in_table_info=2)
 
         # Cache for usable table names
         self._usable_table_names = None
-
-        # Cache for dynamic SQLDatabase instances (used in OracleBot)
-        self._db_cache = {}
 
         # Oracle does not support semicolons at the end of SQL statements via its drivers.
         # We wrap the run method to automatically strip it.
@@ -75,30 +73,13 @@ class DBManager:
 
     def get_db(self, include_tables=None):
         """
-        Returns a SQLDatabase instance. If include_tables is provided,
-        it uses a cached instance or creates a new one.
+        Returns the SQLDatabase instance.
+        Previously this created new instances for different sets of tables,
+        but that caused performance issues due to redundant reflections.
+        Now it always returns the pre-reflected main instance.
+        Tool-level filtering is handled in OracleBot.
         """
-        if include_tables is None:
-            return self.db
-
-        # Use a frozenset for the cache key
-        table_key = frozenset(include_tables)
-        if table_key not in self._db_cache:
-            print(f"Creating new SQLDatabase instance for tables: {include_tables}")
-            new_db = SQLDatabase(self.engine, include_tables=list(table_key), sample_rows_in_table_info=2)
-
-            # Apply Oracle fix to new instance if needed
-            if self.db_type == "oracle":
-                orig_run = new_db.run
-                def wrap(command, *a, **kw):
-                    if isinstance(command, str):
-                        command = command.strip().rstrip(';')
-                    return orig_run(command, *a, **kw)
-                new_db.run = wrap
-
-            self._db_cache[table_key] = new_db
-
-        return self._db_cache[table_key]
+        return self.db
 
     def get_usable_table_names(self):
         """Returns cached usable table names."""

@@ -48,8 +48,8 @@ class OracleBot:
     def _create_agent_executor(self, session_id, include_tables=None, extra_context=None):
         memory = self._get_memory(session_id)
 
-        # Create/Get a dynamic DB instance with only relevant tables (Optimized)
-        db = self.db_manager.get_db(include_tables=include_tables)
+        # Use the global pre-reflected DB instance (High performance)
+        db = self.db_manager.get_db()
 
         if self.llm_manager.llm_type == "openai":
             agent_type = "tool-calling"
@@ -98,6 +98,7 @@ class OracleBot:
         return create_sql_agent(
             llm=self.llm,
             db=db,
+            include_tables=include_tables,
             verbose=True,
             agent_type=agent_type,
             prefix=prefix,
