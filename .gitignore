@@ -13,3 +13,6 @@ models/Meta-Llama-3.1-8B-Instruct-Q4_K_M.gguf
 *.bin
 *.safetensors
 reports_execution.log
+chroma_db/
+*.sqlite3
+
