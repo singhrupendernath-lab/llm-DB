@@ -45,7 +45,7 @@ class OracleBot:
             )
         return self.memories[session_id]
 
-    def _create_agent_executor(self, session_id, include_tables=None):
+    def _create_agent_executor(self, session_id, include_tables=None, extra_context=None):
         memory = self._get_memory(session_id)
 
         # Create a dynamic DB instance with only relevant tables to save tokens
@@ -70,14 +70,20 @@ class OracleBot:
         prefix = (
             "You are an expert SQL Data Analyst. Relevant tables: {table_names_str}.\n"
             "Dialect: {dialect}. Top K: {top_k}.\n"
-            "History: {{chat_history}}\n\n"
-            "RULES:\n"
+            "History: {{chat_history}}\n"
+        ).replace("{table_names_str}", table_names_str)
+
+        if extra_context:
+            prefix += f"\n{extra_context}\n"
+
+        prefix += (
+            "\nRULES:\n"
             "1. Greets? Answer direct.\n"
             "2. DB query? Use 'sql_db_schema' first.\n"
             "3. ONLY use tools below. NO hallucinations.\n"
             "4. STOP after 'Action Input:'.\n"
             "5. NO new questions after 'Final Answer'.\n"
-        ).replace("{table_names_str}", table_names_str)
+        )
 
         if agent_type == AgentType.ZERO_SHOT_REACT_DESCRIPTION:
             prefix += (
@@ -115,6 +121,9 @@ class OracleBot:
         )
 
     def ask(self, question: str, format_instruction: str = None, session_id: str = "default"):
+        # Retrieve relevant past interactions for self-learning
+        extra_context = self.vector_manager.search_relevant_chat(question)
+
         # Check for predefined reports first
         report_id = self.reports_manager.find_report_id(question)
         if report_id:
@@ -147,6 +156,9 @@ class OracleBot:
                     f"Data: {data}\n\n"
                     "Rules:\n1. Output ONLY the table.\n2. Do not add intro/outro text."
                 )
+                if extra_context:
+                    format_prompt = f"{extra_context}\n\n" + format_prompt
+
                 if format_instruction:
                     format_prompt += f"\nNote: {format_instruction}"
 
@@ -156,6 +168,9 @@ class OracleBot:
                 # Add to memory manually for predefined reports
                 memory = self._get_memory(session_id)
                 memory.save_context({"input": question}, {"output": answer})
+
+                # Save to vector DB for self-learning
+                self.vector_manager.add_chat_interaction(question, answer, [query], session_id)
 
                 return {
                     "answer": answer,
@@ -167,10 +182,15 @@ class OracleBot:
 
         # RAG: Find relevant tables
         relevant_tables = self.vector_manager.get_relevant_tables(question)
-        print(f"RAG retrieved relevant tables: {relevant_tables}")
+
+        # Filter to only include tables that actually exist in the DB to avoid errors
+        all_tables = self.db_manager.get_db().get_usable_table_names()
+        relevant_tables = [t for t in relevant_tables if t in all_tables]
+
+        print(f"RAG retrieved relevant tables (filtered): {relevant_tables}")
 
         # Create/Get executor for this session and this specific query (due to dynamic tables)
-        agent_executor = self._create_agent_executor(session_id, include_tables=relevant_tables)
+        agent_executor = self._create_agent_executor(session_id, include_tables=relevant_tables, extra_context=extra_context)
 
         full_query = question
         if format_instruction:
@@ -182,6 +202,9 @@ class OracleBot:
             for step in result.get("intermediate_steps", []):
                 if hasattr(step[0], 'tool') and step[0].tool == "sql_db_query":
                     sql_queries.append(step[0].tool_input)
+
+            # Save to vector DB for self-learning
+            self.vector_manager.add_chat_interaction(question, result["output"], sql_queries, session_id)
 
             return {
                 "answer": result["output"],
@@ -203,8 +226,14 @@ class OracleBot:
                     "Please provide the final answer."
                 ) if last_observation else full_query
 
+                if extra_context:
+                    fallback_prompt = f"{extra_context}\n\n" + fallback_prompt
+
                 response = self.llm.invoke(fallback_prompt) if hasattr(self.llm, 'invoke') else self.llm(fallback_prompt)
                 answer = response.content if hasattr(response, 'content') else str(response)
+
+                # Save successful fallback to vector DB for self-learning
+                self.vector_manager.add_chat_interaction(question, answer, sql_queries, session_id)
 
                 return {
                     "answer": answer,
