@@ -1,6 +1,7 @@
 import unittest
 from unittest.mock import MagicMock, patch
 from src.oracle_bot import OracleBot
+import time
 
 class TestSelfLearning(unittest.TestCase):
     @patch('src.vector_manager.Chroma')
@@ -12,6 +13,7 @@ class TestSelfLearning(unittest.TestCase):
         mock_llm = MagicMock()
         mock_llm_manager.get_llm.return_value = mock_llm
         mock_llm_manager.llm_type = "openai"
+        mock_db_manager.get_usable_table_names.return_value = []
 
         # Initialize Bot
         bot = OracleBot(mock_db_manager, mock_llm_manager)
@@ -27,7 +29,13 @@ class TestSelfLearning(unittest.TestCase):
         with patch.object(bot, '_create_agent_executor', return_value=mock_executor):
             bot.ask(question1)
 
-        # Verify add_chat_interaction was called (it calls chat_db.add_documents)
+        # Wait a bit for the background thread to call add_documents
+        max_retries = 10
+        while max_retries > 0 and not bot.vector_manager.chat_db.add_documents.called:
+            time.sleep(0.1)
+            max_retries -= 1
+
+        # Verify add_chat_interaction was called
         self.assertTrue(bot.vector_manager.chat_db.add_documents.called)
         print("First interaction saved successfully.")
 
@@ -37,7 +45,7 @@ class TestSelfLearning(unittest.TestCase):
         # Mock retrieval from ChromaDB
         mock_doc = MagicMock()
         mock_doc.page_content = f"Question: {question1}\nAnswer: {answer1}"
-        bot.vector_manager.chat_db.similarity_search.return_value = [mock_doc]
+        bot.vector_manager.chat_db.similarity_search_by_vector.return_value = [mock_doc]
 
         # Mock agent executor for second call
         mock_executor2 = MagicMock()
