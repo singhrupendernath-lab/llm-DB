@@ -175,6 +175,7 @@ class OracleBot:
                 response = self.llm.invoke(format_prompt) if hasattr(self.llm, 'invoke') else self.llm(format_prompt)
                 answer = response.content if hasattr(response, 'content') else str(response)
 
+                question_hash = self._hash_question(question)
                 self._store_cache(session_id, question_hash, answer, [query])
 
                 # Save to vector DB for self-learning (Asynchronous)
@@ -184,6 +185,11 @@ class OracleBot:
                     "answer": answer,
                     "sql_queries": [query],
                     "report_id": report_id
+                }
+            except Exception as e:
+                return {
+                    "answer": f"Error executing report: {str(e)}",
+                    "sql_queries": [query]
                 }
 
         # RAG: Find relevant tables (Optimized)
